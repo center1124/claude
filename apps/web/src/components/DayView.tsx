@@ -351,12 +351,21 @@ function SubmitPanel({
           </button>
         </>
       ) : (
-        <p className="rounded-2xl bg-card px-4 py-3 text-sm">
-          ✓ {format(state.sentAt)}에 코치에게 {state.auto ? "자동으로 " : ""}보냈어요
+        <>
+          <p className="rounded-2xl bg-card px-4 py-3 text-sm">
+            ✓ {format(state.sentAt)}에 코치에게 {state.auto ? "자동으로 " : ""}보냈어요
+            <span className="mt-1 block text-xs text-ink-soft">보낸 뒤에도 기록은 계속 고칠 수 있어요.</span>
+          </p>
           {state.editedAfter && (
-            <span className="mt-1 block text-xs text-ink-soft">보낸 뒤 고친 내용은 코치에게 “수정됨”으로 표시돼요.</span>
+            <button
+              type="button"
+              onClick={onSubmit}
+              className="rounded-2xl border border-pen bg-card py-3.5 font-bold text-pen"
+            >
+              고친 내용 다시 보내기
+            </button>
           )}
-        </p>
+        </>
       )}
     </div>
   );
