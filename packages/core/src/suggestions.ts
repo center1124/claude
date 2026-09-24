@@ -142,3 +142,14 @@ function withFullness(text: string, fullness?: number): { description: string; f
   if (!match) return { description: text, fullness };
   return { description: text.slice(0, match.index).trim(), fullness: Number(match[1]) };
 }
+
+/**
+ * "어제처럼" 수면: 가장 최근 날(최대 7일 전까지) 중 일어난 시각이 있는 기록의 잠든·일어난 시각.
+ * logs는 날짜순(오래된 → 최근)이며, 오늘 기록은 넣지 않는다.
+ */
+export function previousSleep(logs: DailyLog[], maxDays = 7): { sleepStart?: HHMM; sleepEnd: HHMM } | null {
+  for (const log of logs.slice(-maxDays).reverse()) {
+    if (log.morning.sleepEnd) return { sleepStart: log.morning.sleepStart, sleepEnd: log.morning.sleepEnd };
+  }
+  return null;
+}

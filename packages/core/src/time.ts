@@ -82,11 +82,24 @@ export function timelineHours(): { label: string; position: number }[] {
   return hours;
 }
 
-/** 타임라인 위 위치(0~1)를 시각으로. step분 단위로 반올림한다 (타임라인을 눌러 기록할 때) */
-export function timeFromTimelinePosition(fraction: number, step = 10): HHMM {
+/**
+ * 타임라인 위 위치(0~1)를 시각으로 (타임라인을 눌러 기록할 때).
+ * round: step분 단위로 반올림. floor: 누른 칸의 시작 시각 (30분 칸을 그린 폰 타임라인)
+ */
+export function timeFromTimelinePosition(fraction: number, step = 10, mode: "round" | "floor" = "round"): HHMM {
   const clamped = Math.min(Math.max(fraction, 0), 1);
   const minutes = TIMELINE_START + clamped * (TIMELINE_END - TIMELINE_START);
-  return toHHMM(Math.round(minutes / step) * step);
+  const snapped = (mode === "floor" ? Math.floor(minutes / step) : Math.round(minutes / step)) * step;
+  return toHHMM(Math.min(snapped, TIMELINE_END - (mode === "floor" ? step : 0)));
+}
+
+/** 타임라인의 30분 눈금 위치 (폰 타임라인의 칸 나누기) */
+export function timelineHalfHours(): number[] {
+  const marks: number[] = [];
+  for (let m = TIMELINE_START + 30; m < TIMELINE_END; m += 60) {
+    marks.push((m - TIMELINE_START) / (TIMELINE_END - TIMELINE_START));
+  }
+  return marks;
 }
 
 /** 끼니 버튼: 누르면 대표 시각이 들어가고, 필요하면 고친다 */

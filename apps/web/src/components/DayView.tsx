@@ -12,6 +12,7 @@ import {
   hasContent,
   MEAL_SLOT_LABELS,
   mealTimeFromPhoto,
+  previousSleep,
   missingMealSlots,
   recentMeals,
   shiftTime,
@@ -227,6 +228,20 @@ export function DayView({ date }: { date: ISODate }) {
               : setBed(time)
           }
         />
+        <SleepCopyBanner
+          current={log.morning}
+          previous={previousSleep(pastLogs)}
+          onApply={(sleep) =>
+            update({
+              ...log,
+              morning: {
+                ...log.morning,
+                sleepStart: log.morning.sleepStart ?? sleep.sleepStart,
+                sleepEnd: log.morning.sleepEnd ?? sleep.sleepEnd,
+              },
+            })
+          }
+        />
         <SleepSummary
           date={date}
           lastNightStart={log.morning.sleepStart}
@@ -298,6 +313,40 @@ export function DayView({ date }: { date: ISODate }) {
           onClose={() => setEditing(null)}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * 오늘 수면이 비어 있으면 가장 최근 수면(어젯밤 잠든 → 오늘 일어난)을 한 번에 채우는 제안.
+ * 자동으로 채우지 않는다: 기록을 잊은 날과 실제로 같은 시각에 잔 날을 코치가 구분할 수 있게.
+ */
+function SleepCopyBanner({
+  current,
+  previous,
+  onApply,
+}: {
+  current: { sleepStart?: HHMM; sleepEnd?: HHMM };
+  previous: { sleepStart?: HHMM; sleepEnd: HHMM } | null;
+  onApply: (sleep: { sleepStart?: HHMM; sleepEnd: HHMM }) => void;
+}) {
+  if (!previous || current.sleepEnd) return null;
+  return (
+    <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-highlight/40 px-3 py-2 text-xs">
+      <span>
+        😴 어제처럼 잤나요?{" "}
+        <b>
+          {previous.sleepStart && !current.sleepStart ? `어젯밤 ${previous.sleepStart} → ` : ""}
+          {previous.sleepEnd} 일어남
+        </b>
+      </span>
+      <button
+        type="button"
+        onClick={() => onApply(previous)}
+        className="shrink-0 rounded-full border border-ink/20 bg-card px-3 py-1 font-bold"
+      >
+        그대로 쓰기
+      </button>
     </div>
   );
 }

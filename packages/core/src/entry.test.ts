@@ -3,6 +3,7 @@ import {
   emptyLog,
   groupPhotosIntoMeals,
   parseDayText,
+  previousSleep,
   similarTimeMeal,
   shiftTime,
   sleepTapTarget,
@@ -109,5 +110,28 @@ describe("30분 단위로 누르기", () => {
   it("폰 타임라인은 30분 단위로 잡는다", () => {
     expect(timeFromTimelinePosition(0.34, 30)).toBe("13:00"); // 12:48 → 13:00
     expect(timeFromTimelinePosition(0.32, 30)).toBe("12:30"); // 12:24 → 12:30
+  });
+});
+
+describe("어제처럼 잤어요", () => {
+  const withSleep = (date: string, sleepStart?: string, sleepEnd?: string): DailyLog => ({
+    ...emptyLog(date),
+    morning: { sleepStart, sleepEnd },
+  });
+  it("가장 최근에 일어난 시각이 있는 날의 수면", () => {
+    const logs = [withSleep("2026-09-21", "23:30", "07:00"), withSleep("2026-09-22", "00:30", "07:30"), emptyLog("2026-09-23")];
+    expect(previousSleep(logs)).toEqual({ sleepStart: "00:30", sleepEnd: "07:30" });
+  });
+  it("일주일 넘게 기록이 없으면 null", () => {
+    const logs = [withSleep("2026-09-10", "00:30", "07:30"), ...Array.from({ length: 7 }, (_, i) => emptyLog(`2026-09-1${i + 1}`))];
+    expect(previousSleep(logs)).toBeNull();
+  });
+});
+
+describe("30분 칸 누르기", () => {
+  it("누른 칸의 시작 시각", () => {
+    expect(timeFromTimelinePosition(0.34, 30, "floor")).toBe("12:30"); // 12:48 → 12:30 칸
+    expect(timeFromTimelinePosition(0.32, 30, "floor")).toBe("12:00"); // 12:24 → 12:00 칸
+    expect(timeFromTimelinePosition(1, 30, "floor")).toBe("01:30"); // 맨 끝 칸
   });
 });
