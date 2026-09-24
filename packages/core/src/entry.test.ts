@@ -6,23 +6,12 @@ import {
   previousSleep,
   similarTimeMeal,
   shiftTime,
-  sleepTapTarget,
-  timeFromTimelinePosition,
   type DailyLog,
   type Meal,
 } from "./index";
 
 const meal = (time: string, description: string): Meal => ({ id: time + description, time, description, photoIds: [] });
 const log = (date: string, meals: Meal[]): DailyLog => ({ ...emptyLog(date), meals });
-
-describe("타임라인을 눌러 기록", () => {
-  it("누른 위치를 10분 단위 시각으로", () => {
-    expect(timeFromTimelinePosition(0)).toBe("06:00");
-    expect(timeFromTimelinePosition(0.5)).toBe("16:00");
-    expect(timeFromTimelinePosition(0.326)).toBe("12:30"); // 12:31 → 12:30
-    expect(timeFromTimelinePosition(1)).toBe("02:00");
-  });
-});
 
 describe("수정 가능한 예시 (비슷한 시각에 먹은 것)", () => {
   const logs = [
@@ -90,26 +79,10 @@ describe("한 번에 쓰기", () => {
   });
 });
 
-describe("수면 줄 누르기", () => {
-  it("오후 2시 전은 일어난 시각, 이후(새벽 포함)는 잠든 시각", () => {
-    expect(sleepTapTarget("07:30")).toBe("wake");
-    expect(sleepTapTarget("13:50")).toBe("wake");
-    expect(sleepTapTarget("23:40")).toBe("bed");
-    expect(sleepTapTarget("00:30")).toBe("bed");
-  });
-});
-
 describe("±10분", () => {
   it("앞뒤로 옮기고 자정을 넘으면 돌아간다", () => {
     expect(shiftTime("12:30", 10)).toBe("12:40");
     expect(shiftTime("00:05", -10)).toBe("23:55");
-  });
-});
-
-describe("30분 단위로 누르기", () => {
-  it("폰 타임라인은 30분 단위로 잡는다", () => {
-    expect(timeFromTimelinePosition(0.34, 30)).toBe("13:00"); // 12:48 → 13:00
-    expect(timeFromTimelinePosition(0.32, 30)).toBe("12:30"); // 12:24 → 12:30
   });
 });
 

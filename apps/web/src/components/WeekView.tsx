@@ -2,34 +2,50 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   addDays,
+  compareTimelineTime,
   formatDuration,
   periodDday,
   sleepMinutes,
   startOfWeek,
   submissionState,
+  summarizeWeek,
   weekdayEn,
+  weekdayKo,
   type DailyLog,
   type ISODate,
 } from "@diet/core";
 import { useLogs, useProfile } from "@/lib/repository";
 import { useToday } from "@/lib/use-today";
 import { Logo } from "./Logo";
-import { Timeline } from "./Timeline";
+import { Photo } from "./Photo";
+import { Timeline, TimelineHours } from "./Timeline";
+import { WeekSummaryCard } from "./WeekSummaryCard";
 import { Loading } from "./ui";
 
-/** 종이 주간 기록지와 같은 모양: 요일마다 아침 체크 표 + 하루 타임라인 */
+/**
+ * 주간 보기: 한 주를 한눈에 보고 지난주와 비교한다.
+ * 폰은 요일마다 한 줄짜리 흐름 그림, PC는 종이 주간 기록지 모양.
+ */
 export function WeekView({ date }: { date: ISODate }) {
   const router = useRouter();
   const today = useToday();
   const monday = startOfWeek(date);
   const sunday = addDays(monday, 6);
-  // 일요일 밤 취침 시각은 다음 주 월요일 기록에 있으므로 하루 더 불러온다
-  const logs = useLogs(monday, addDays(sunday, 1));
+  // 지난주 월요일 ~ 다음 주 월요일 (일요일 밤 취침 시각은 다음 날 기록에 있다)
+  const logs = useLogs(addDays(monday, -7), addDays(monday, 7));
   const { profile } = useProfile();
+  const [compare, setCompare] = useState(false);
+  const [openDate, setOpenDate] = useState<ISODate | null>(null);
 
   if (!logs || !profile) return <Loading />;
+
+  const lastWeek = logs.slice(0, 8);
+  const thisWeek = logs.slice(7, 15);
+  const periodDate = profile.periodTracking === false ? undefined : profile.periodExpectedDate;
+  const periodTracking = profile.periodTracking !== false;
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -44,27 +60,177 @@ export function WeekView({ date }: { date: ISODate }) {
         <WeekNavLink date={addDays(monday, 7)} label="다음 주" icon="›" />
       </header>
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-2">
-        <div className="grid min-w-[960px] gap-3">
-          {logs.slice(0, 7).map((log, i) => (
-            <DayRow
-              key={log.date}
-              log={log}
-              bedTime={logs[i + 1].morning.sleepStart}
-              isToday={log.date === today}
-              periodExpectedDate={profile.periodTracking === false ? undefined : profile.periodExpectedDate}
-              periodTracking={profile.periodTracking !== false}
-              onOpen={() => router.push(`/day/${log.date}`)}
+      <WeekSummaryCard current={summarizeWeek(thisWeek)} previous={summarizeWeek(lastWeek)} />
+
+      {/* 폰: 요일마다 한 줄 */}
+      <section className="grid gap-1.5 rounded-2xl border border-line bg-card p-3 md:hidden">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-sm font-bold">하루 흐름</h2>
+          <label className="flex items-center gap-1.5 text-xs">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--pen)]"
+              checked={compare}
+              onChange={(e) => setCompare(e.target.checked)}
             />
-          ))}
+            지난주 겹쳐 보기
+          </label>
         </div>
+        <div className="grid grid-cols-[2.75rem_1fr] gap-x-1.5">
+          <span />
+          <TimelineHours small />
+        </div>
+        {thisWeek.slice(0, 7).map((log, i) => (
+          <PhoneDayRow
+            key={log.date}
+            log={log}
+            bedTime={thisWeek[i + 1].morning.sleepStart}
+            lastWeek={compare ? { log: lastWeek[i], bedTime: lastWeek[i + 1].morning.sleepStart } : undefined}
+            isToday={log.date === today}
+            open={openDate === log.date}
+            onToggle={() => setOpenDate(openDate === log.date ? null : log.date)}
+            periodTracking={periodTracking}
+            periodExpectedDate={periodDate}
+          />
+        ))}
+        <p className="mt-1 flex items-center gap-3 text-[11px] text-ink-soft">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-4 rounded-full bg-highlight" /> 수면
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-3 w-1 rounded-full bg-pen" /> 식사
+          </span>
+          {compare && <span>아래 흐린 줄: 지난주 같은 요일</span>}
+        </p>
+      </section>
+
+      {/* PC: 종이 주간 기록지 모양 */}
+      <div className="hidden gap-3 md:grid">
+        {thisWeek.slice(0, 7).map((log, i) => (
+          <PaperDayRow
+            key={log.date}
+            log={log}
+            bedTime={thisWeek[i + 1].morning.sleepStart}
+            isToday={log.date === today}
+            periodExpectedDate={periodDate}
+            periodTracking={periodTracking}
+            onOpen={() => router.push(`/day/${log.date}`)}
+          />
+        ))}
+        <p className="text-center text-xs text-ink-soft">요일을 누르면 그날 기록을 적거나 고칠 수 있어요.</p>
       </div>
-      <p className="text-center text-xs text-ink-soft">요일을 누르면 그날 기록을 적거나 고칠 수 있어요.</p>
     </div>
   );
 }
 
-function DayRow({
+function PhoneDayRow({
+  log,
+  bedTime,
+  lastWeek,
+  isToday,
+  open,
+  onToggle,
+  periodTracking,
+  periodExpectedDate,
+}: {
+  log: DailyLog;
+  bedTime?: string;
+  lastWeek?: { log: DailyLog; bedTime?: string };
+  isToday: boolean;
+  open: boolean;
+  onToggle: () => void;
+  periodTracking: boolean;
+  periodExpectedDate?: ISODate;
+}) {
+  const sent = submissionState(log).kind === "sent";
+  return (
+    <div className={`rounded-lg ${open ? "bg-paper" : ""}`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-label={`${weekdayKo(log.date)}요일 자세히 보기`}
+        className="grid w-full grid-cols-[2.75rem_1fr] items-center gap-x-1.5 text-left"
+      >
+        <span className={`text-center leading-tight ${isToday ? "font-bold text-pen" : "text-ink-soft"}`}>
+          <span className="block text-xs">{weekdayKo(log.date)}</span>
+          <span className="block text-[10px]">{shortDate(log.date)}</span>
+          {sent && <span className="block text-[9px] text-pen">✓</span>}
+        </span>
+        <span className="grid gap-0.5">
+          <Timeline variant="mini" meals={log.meals} wakeTime={log.morning.sleepEnd} bedTime={bedTime} />
+          {lastWeek && (
+            <span className="opacity-40">
+              <Timeline
+                variant="mini"
+                meals={lastWeek.log.meals}
+                wakeTime={lastWeek.log.morning.sleepEnd}
+                bedTime={lastWeek.bedTime}
+              />
+            </span>
+          )}
+        </span>
+      </button>
+      {open && (
+        <DayDetail log={log} periodTracking={periodTracking} periodExpectedDate={periodExpectedDate} />
+      )}
+    </div>
+  );
+}
+
+/** 폰에서 요일을 누르면 펼쳐지는 그날 기록 */
+function DayDetail({
+  log,
+  periodTracking,
+  periodExpectedDate,
+}: {
+  log: DailyLog;
+  periodTracking: boolean;
+  periodExpectedDate?: ISODate;
+}) {
+  const { morning } = log;
+  const facts = [
+    morning.sleepStart && morning.sleepEnd && `수면 ${formatDuration(sleepMinutes(morning.sleepStart, morning.sleepEnd))}`,
+    morning.weightKg !== undefined && `체중 ${morning.weightKg}kg`,
+    morning.waistCm !== undefined && `허리 ${morning.waistCm}cm`,
+    morning.bowelCount !== undefined && `화장실 ${morning.bowelCount}`,
+    periodTracking && periodDday(log.date, periodExpectedDate),
+  ].filter(Boolean);
+  const meals = [...log.meals].sort((a, b) => compareTimelineTime(a.time, b.time));
+
+  return (
+    <div className="grid gap-2 px-2 pb-3 pt-2 text-sm">
+      {facts.length > 0 && <p className="text-xs text-ink-soft">{facts.join(" · ")}</p>}
+      {meals.length === 0 ? (
+        <p className="text-xs text-ink-soft">식사 기록이 없어요.</p>
+      ) : (
+        <ul className="grid gap-1.5">
+          {meals.map((meal) => (
+            <li key={meal.id} className="flex gap-2">
+              <span className="w-11 shrink-0 font-bold">{meal.time}</span>
+              <span className="grid flex-1 gap-1">
+                <span className="whitespace-pre-line text-pen">{meal.description || "사진"}</span>
+                {meal.photoIds.length > 0 && (
+                  <span className="flex gap-1">
+                    {meal.photoIds.map((id) => (
+                      <Photo key={id} id={id} className="h-12 w-12 rounded-md" />
+                    ))}
+                  </span>
+                )}
+              </span>
+              {meal.fullness && <span className="shrink-0 font-bold text-pen-blue">포만 {meal.fullness}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link href={`/day/${log.date}`} className="justify-self-end text-xs text-ink-soft underline">
+        이 날 기록 고치기 ›
+      </Link>
+    </div>
+  );
+}
+
+function PaperDayRow({
   log,
   bedTime,
   isToday,
@@ -81,7 +247,10 @@ function DayRow({
 }) {
   const { morning } = log;
   const stats: [string, string | undefined][] = [
-    ["총 수면량", morning.sleepStart && morning.sleepEnd ? formatDuration(sleepMinutes(morning.sleepStart, morning.sleepEnd)) : undefined],
+    [
+      "총 수면량",
+      morning.sleepStart && morning.sleepEnd ? formatDuration(sleepMinutes(morning.sleepStart, morning.sleepEnd)) : undefined,
+    ],
     ["체중", morning.weightKg?.toString()],
     ["허리 둘레", morning.waistCm?.toString()],
     ["화장실", morning.bowelCount?.toString()],

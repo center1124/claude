@@ -82,13 +82,6 @@ export function timelineHours(): { label: string; position: number }[] {
   return hours;
 }
 
-/** 타임라인 위 위치(0~1)를 시각으로. step분 단위로 반올림한다 (타임라인을 눌러 기록할 때) */
-export function timeFromTimelinePosition(fraction: number, step = 10): HHMM {
-  const clamped = Math.min(Math.max(fraction, 0), 1);
-  const minutes = TIMELINE_START + clamped * (TIMELINE_END - TIMELINE_START);
-  return toHHMM(Math.round(minutes / step) * step);
-}
-
 /** 끼니 버튼: 누르면 대표 시각이 들어가고, 필요하면 고친다 */
 export const MEAL_TIME_PRESETS: { label: string; time: HHMM }[] = [
   { label: "아침", time: "08:00" },
@@ -97,13 +90,6 @@ export const MEAL_TIME_PRESETS: { label: string; time: HHMM }[] = [
   { label: "저녁", time: "19:00" },
   { label: "야식", time: "22:30" },
 ];
-
-/** 수면 줄을 눌렀을 때 이 시각 이전이면 일어난 시각, 이후면 잠든 시각으로 본다 */
-export const SLEEP_TAP_SPLIT = 14 * 60;
-
-export function sleepTapTarget(time: HHMM): "wake" | "bed" {
-  return timelineMinutes(time) < SLEEP_TAP_SPLIT ? "wake" : "bed";
-}
 
 /** 시각을 분 단위로 앞뒤로 옮긴다 (자정을 넘으면 돌아간다). ±10분 버튼용 */
 export function shiftTime(time: HHMM, minutes: number): HHMM {

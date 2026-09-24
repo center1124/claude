@@ -6,7 +6,6 @@ import {
   addDays,
   compareTimelineTime,
   formatDateKo,
-  formatDuration,
   frequentFoods,
   groupPhotosIntoMeals,
   hasContent,
@@ -15,12 +14,8 @@ import {
   previousSleep,
   missingMealSlots,
   recentMeals,
-  shiftTime,
-  sleepMinutes,
-  sleepTapTarget,
   submissionState,
   type DailyLog,
-  type HHMM,
   type ParsedMeal,
   type ISODate,
   type Meal,
@@ -44,7 +39,7 @@ export function DayView({ date }: { date: ISODate }) {
   const today = useToday();
   const isToday = date === today;
   const { log, update } = useDailyLog(date);
-  const { log: nextLog, update: updateNext } = useDailyLog(addDays(date, 1));
+  const { log: nextLog } = useDailyLog(addDays(date, 1));
   const { log: prevLog } = useDailyLog(addDays(date, -1));
   const pastLogs = useLogs(addDays(date, -30), addDays(date, -1));
   const { profile } = useProfile();
@@ -67,16 +62,6 @@ export function DayView({ date }: { date: ISODate }) {
     if (!log) return;
     const exists = log.meals.some((m) => m.id === meal.id);
     update({ ...log, meals: exists ? log.meals.map((m) => (m.id === meal.id ? meal : m)) : [...log.meals, meal] });
-  }
-
-  /** 오늘 아침 일어난 시각 (이 날 기록) */
-  function setWake(time: HHMM | undefined) {
-    if (log) update({ ...log, morning: { ...log.morning, sleepEnd: time } });
-  }
-
-  /** 오늘 밤 잠든 시각 (수면이 끝나는 다음 날 기록에 저장) */
-  function setBed(time: HHMM | undefined) {
-    if (nextLog) updateNext({ ...nextLog, morning: { ...nextLog.morning, sleepStart: time } });
   }
 
   function deleteMeal(id: string) {
@@ -163,6 +148,7 @@ export function DayView({ date }: { date: ISODate }) {
         date={date}
         morning={log.morning}
         previous={previous}
+        previousSleep={previousSleep(pastLogs)}
         periodTracking={profile.periodTracking !== false}
         periodExpectedDate={profile.periodExpectedDate}
         onChange={(morning) => update({ ...log, morning })}
@@ -212,50 +198,19 @@ export function DayView({ date }: { date: ISODate }) {
           </p>
         )}
 
-        <p className="mb-2 text-xs leading-relaxed text-ink-soft">
-          👆 <b>윗줄</b>을 누르면 일어난·잠든 시각, <b>아래 칸</b>을 누르면 그 시각의 식사가 기록돼요.
-        </p>
         <Timeline
-          compact
+          variant="compact"
           meals={log.meals}
           wakeTime={log.morning.sleepEnd}
           bedTime={nextLog.morning.sleepStart}
           onMealClick={(meal) => setEditing({ meal })}
-          onTimeClick={(time) => setEditing({ seed: { time, timeSource: "tap" } })}
-          onSleepClick={(time) =>
-            sleepTapTarget(time) === "wake"
-              ? setWake(time)
-              : setBed(time)
-          }
-        />
-        <SleepCopyBanner
-          current={log.morning}
-          previous={previousSleep(pastLogs)}
-          onApply={(sleep) =>
-            update({
-              ...log,
-              morning: {
-                ...log.morning,
-                sleepStart: log.morning.sleepStart ?? sleep.sleepStart,
-                sleepEnd: log.morning.sleepEnd ?? sleep.sleepEnd,
-              },
-            })
-          }
-        />
-        <SleepSummary
-          date={date}
-          lastNightStart={log.morning.sleepStart}
-          wakeTime={log.morning.sleepEnd}
-          bedTime={nextLog.morning.sleepStart}
-          onChangeWake={setWake}
-          onChangeBed={setBed}
         />
 
         {meals.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-soft">
-            먹을 때 사진만 찍어 두면 찍은 시각이 자동으로 기록돼요.
+            먹을 때 사진만 찍어 두세요.
             <br />
-            타임라인에서 먹은 시각쯤을 눌러도 돼요.
+            찍은 시각이 자동으로 기록돼요.
           </p>
         ) : (
           <ul className="mt-3 grid gap-2">
@@ -314,109 +269,6 @@ export function DayView({ date }: { date: ISODate }) {
         />
       )}
     </div>
-  );
-}
-
-/**
- * 오늘 수면이 비어 있으면 가장 최근 수면(어젯밤 잠든 → 오늘 일어난)을 한 번에 채우는 제안.
- * 자동으로 채우지 않는다: 기록을 잊은 날과 실제로 같은 시각에 잔 날을 코치가 구분할 수 있게.
- */
-function SleepCopyBanner({
-  current,
-  previous,
-  onApply,
-}: {
-  current: { sleepStart?: HHMM; sleepEnd?: HHMM };
-  previous: { sleepStart?: HHMM; sleepEnd: HHMM } | null;
-  onApply: (sleep: { sleepStart?: HHMM; sleepEnd: HHMM }) => void;
-}) {
-  if (!previous || current.sleepEnd) return null;
-  return (
-    <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-highlight/40 px-3 py-2 text-xs">
-      <span>
-        😴 어제처럼 잤나요?{" "}
-        <b>
-          {previous.sleepStart && !current.sleepStart ? `어젯밤 ${previous.sleepStart} → ` : ""}
-          {previous.sleepEnd} 일어남
-        </b>
-      </span>
-      <button
-        type="button"
-        onClick={() => onApply(previous)}
-        className="shrink-0 rounded-full border border-ink/20 bg-card px-3 py-1 font-bold"
-      >
-        그대로 쓰기
-      </button>
-    </div>
-  );
-}
-
-/**
- * 타임라인 아래 수면 요약: 오늘 일어난 시각, 오늘 밤 잠든 시각(±10분, 지우기)과
- * 총 수면량(어젯밤 잠든 시각 → 오늘 일어난 시각).
- */
-function SleepSummary({
-  date,
-  lastNightStart,
-  wakeTime,
-  bedTime,
-  onChangeWake,
-  onChangeBed,
-}: {
-  date: ISODate;
-  lastNightStart?: HHMM;
-  wakeTime?: HHMM;
-  bedTime?: HHMM;
-  onChangeWake: (time: HHMM | undefined) => void;
-  onChangeBed: (time: HHMM | undefined) => void;
-}) {
-  if (!wakeTime && !bedTime) return null;
-  return (
-    <div className="mt-2 grid gap-1.5 text-xs">
-      <div className="flex flex-wrap gap-1.5">
-        {wakeTime && <SleepChip icon="☀️" label="일어남" time={wakeTime} onChange={onChangeWake} />}
-        {bedTime && <SleepChip icon="🌙" label="잠듦" time={bedTime} onChange={onChangeBed} />}
-      </div>
-      {wakeTime &&
-        (lastNightStart ? (
-          <p className="text-ink-soft">
-            총 수면 <b className="text-pen">{formatDuration(sleepMinutes(lastNightStart, wakeTime))}</b> (어젯밤{" "}
-            {lastNightStart} 잠듦)
-          </p>
-        ) : (
-          <Link href={`/day/${addDays(date, -1)}`} className="text-ink-soft underline">
-            어젯밤 잠든 시각이 없어요. 어제 타임라인 윗줄에서 눌러주세요 ›
-          </Link>
-        ))}
-    </div>
-  );
-}
-
-function SleepChip({
-  icon,
-  label,
-  time,
-  onChange,
-}: {
-  icon: string;
-  label: string;
-  time: HHMM;
-  onChange: (time: HHMM | undefined) => void;
-}) {
-  const small = "grid h-6 w-6 place-items-center rounded-full bg-card";
-  return (
-    <span className="flex items-center gap-1 rounded-full bg-highlight/50 py-1 pl-3 pr-1">
-      {icon} {label} <b className="mr-1">{time}</b>
-      <button type="button" aria-label={`${label} 10분 앞으로`} onClick={() => onChange(shiftTime(time, -10))} className={small}>
-        −
-      </button>
-      <button type="button" aria-label={`${label} 10분 뒤로`} onClick={() => onChange(shiftTime(time, 10))} className={small}>
-        +
-      </button>
-      <button type="button" aria-label={`${label} 시각 지우기`} onClick={() => onChange(undefined)} className="px-1.5">
-        ✕
-      </button>
-    </span>
   );
 }
 

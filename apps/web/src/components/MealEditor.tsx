@@ -23,7 +23,7 @@ export interface MealEditorProps {
   isToday: boolean;
   /** 고치는 식사. 없으면 새 식사 */
   meal?: Meal;
-  /** 새 식사의 시작 값: 사진부터 시작했으면 저장된 사진, 타임라인을 눌렀으면 그 시각 */
+  /** 새 식사의 시작 값: 사진부터 시작했으면 저장된 사진과 촬영 시각 */
   seed?: MealSeed;
   /** 오늘 이전 기록 (예시를 찾을 때) */
   pastLogs: DailyLog[];
@@ -37,8 +37,8 @@ export interface MealEditorProps {
 export interface MealSeed {
   photoIds?: string[];
   time?: HHMM;
-  /** photo: 사진 촬영 시각, missing: 사진에 시각이 없음, tap: 타임라인을 누른 시각 */
-  timeSource?: "photo" | "missing" | "tap";
+  /** photo: 사진 촬영 시각, missing: 사진에 시각이 없음 */
+  timeSource?: "photo" | "missing";
 }
 
 
@@ -239,9 +239,6 @@ export function MealEditor({
               )}
             </div>
             {timeSource === "photo" && <p className="text-xs text-ink-soft">📷 사진을 찍은 시각이에요.</p>}
-            {timeSource === "tap" && (
-              <p className="text-xs text-ink-soft">👆 누른 위치의 시각이에요. 다르면 ±10분으로 맞춰주세요.</p>
-            )}
             {timeSource === "missing" && !draft.time && (
               <p className="text-xs text-pen">사진에 찍은 시각 정보가 없어요. 아래 버튼이나 시계로 골라주세요.</p>
             )}
