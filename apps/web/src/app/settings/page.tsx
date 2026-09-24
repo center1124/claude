@@ -1,0 +1,51 @@
+"use client";
+
+import { Logo } from "@/components/Logo";
+import { Card, inputClass, Loading } from "@/components/ui";
+import { useProfile } from "@/lib/repository";
+
+export default function SettingsPage() {
+  const { profile, update } = useProfile();
+  if (!profile) return <Loading />;
+
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      <header className="text-center">
+        <Logo className="block text-2xl" />
+        <h1 className="font-bold">설정</h1>
+      </header>
+
+      <Card title="내 정보">
+        <label className="grid gap-1 text-sm font-medium">
+          이름
+          <input
+            className={inputClass}
+            value={profile.name}
+            placeholder="코치님이 부를 이름"
+            onChange={(e) => update({ ...profile, name: e.target.value })}
+          />
+        </label>
+      </Card>
+
+      <Card title="생리 예정일">
+        <label className="grid gap-1 text-sm">
+          <input
+            type="date"
+            className={inputClass}
+            value={profile.periodExpectedDate ?? ""}
+            onChange={(e) => update({ ...profile, periodExpectedDate: e.target.value || undefined })}
+          />
+          <span className="text-xs text-ink-soft">
+            예정일 7일 전부터 7일 후까지(D-7 ~ D+7) 기록에 D-day가 자동으로 표시돼요. 다음 예정일이 정해지면 다시
+            바꿔 주세요.
+          </span>
+        </label>
+      </Card>
+
+      <p className="rounded-2xl bg-card p-4 text-xs leading-relaxed text-ink-soft">
+        지금은 체험판이라 기록이 이 기기의 브라우저에만 저장돼요. 로그인과 서버 저장이 연결되면 코치와 기록이
+        공유됩니다.
+      </p>
+    </div>
+  );
+}

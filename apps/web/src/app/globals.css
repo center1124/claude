@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* 종이 기록지 느낌: 미색 종이, 빨간 펜(기록), 파란 펜(포만감), 형광펜(수면) */
+:root {
+  --paper: #fbf8f3;
+  --card: #ffffff;
+  --ink: #37332f;
+  --ink-soft: #8a837b;
+  --line: #e2ddd5;
+  --pen: #e4572e;
+  --pen-blue: #2b8fd6;
+  --highlight: #cdd0f0;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-pen: var(--pen);
+  --color-pen-blue: var(--pen-blue);
+  --color-highlight: var(--highlight);
+  --font-sans: var(--font-noto-kr), system-ui, sans-serif;
+  --font-script: var(--font-script);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
