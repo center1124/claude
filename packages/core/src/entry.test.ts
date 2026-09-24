@@ -127,11 +127,3 @@ describe("어제처럼 잤어요", () => {
     expect(previousSleep(logs)).toBeNull();
   });
 });
-
-describe("30분 칸 누르기", () => {
-  it("누른 칸의 시작 시각", () => {
-    expect(timeFromTimelinePosition(0.34, 30, "floor")).toBe("12:30"); // 12:48 → 12:30 칸
-    expect(timeFromTimelinePosition(0.32, 30, "floor")).toBe("12:00"); // 12:24 → 12:00 칸
-    expect(timeFromTimelinePosition(1, 30, "floor")).toBe("01:30"); // 맨 끝 칸
-  });
-});

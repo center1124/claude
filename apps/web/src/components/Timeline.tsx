@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import {
   compareTimelineTime,
-  timelineHalfHours,
   sleepSegments,
   timeFromTimelinePosition,
   timelineHours,
@@ -19,12 +17,9 @@ import {
  *   손가락으로 정확히 누르기 어려우므로 30분 단위로 잡는다 (입력 창에서 ±10분으로 맞춘다)
  */
 const LAYOUT = {
-  full: { labelWidth: 0.11, laneRem: 5.25, step: 10, snap: "round" as const },
-  compact: { labelWidth: 0.1, laneRem: 2.25, step: 30, snap: "floor" as const },
+  full: { labelWidth: 0.11, laneRem: 5.25, step: 10 },
+  compact: { labelWidth: 0.1, laneRem: 2.25, step: 30 },
 };
-
-/** 30분 칸 하나의 너비 (타임라인 대비) */
-const HALF_HOUR = 30 / (20 * 60);
 
 interface Props {
   meals: Meal[];
@@ -45,42 +40,7 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick, o
   const layout = compact ? LAYOUT.compact : LAYOUT.full;
   const hours = timelineHours();
   const placed = placeLabels(meals, layout.labelWidth);
-  const timeAt = (e: React.MouseEvent<HTMLElement>) => timeAtPointer(e, layout.step, layout.snap);
-  // 폰 타임라인: 누르는 동안 그 30분 칸을 칠해서 어느 칸을 눌렀는지 보여준다
-  const [pressed, setPressed] = useState<{ row: "sleep" | "body"; from: number } | null>(null);
-  const pressHandlers = (row: "sleep" | "body") =>
-    compact
-      ? {
-          onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
-            const root = e.currentTarget.closest("[data-testid=timeline]") as HTMLElement;
-            const rect = root.getBoundingClientRect();
-            const fraction = (e.clientX - rect.left) / rect.width;
-            setPressed({ row, from: Math.min(Math.floor(fraction / HALF_HOUR), 39) * HALF_HOUR });
-          },
-          onPointerUp: () => setTimeout(() => setPressed(null), 150),
-          onPointerLeave: () => setPressed(null),
-          onPointerCancel: () => setPressed(null),
-        }
-      : {};
-  const pressedCell = (row: "sleep" | "body") =>
-    pressed?.row === row && (
-      <div
-        className="pointer-events-none absolute inset-y-0 bg-pen/25"
-        style={{ left: pct(pressed.from), width: pct(HALF_HOUR) }}
-        aria-hidden
-      />
-    );
-  const gridLines = compact && (
-    <>
-      {timelineHalfHours().map((position) => (
-        <div
-          key={position}
-          className="pointer-events-none absolute inset-y-0 border-l border-dotted border-line"
-          style={{ left: pct(position) }}
-        />
-      ))}
-    </>
-  );
+  const timeAt = (e: React.MouseEvent<HTMLElement>) => timeAtPointer(e, layout.step);
   // 누를 수 없는 타임라인(주간 보기)에서는 버튼 대신 div로 그려 클릭이 바깥으로 전달되게 한다
   const MarkerTag = onMealClick ? "button" : "div";
   const lanes = Math.max(1, ...placed.map((p) => p.lane + 1));
@@ -112,10 +72,7 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick, o
           })
         }
         data-testid="timeline-sleep"
-        {...pressHandlers("sleep")}
       >
-        {gridLines}
-        {pressedCell("sleep")}
         {onSleepClick && !wakeTime && !bedTime && (
           <p className="pointer-events-none absolute inset-0 grid place-items-center text-[11px] text-ink-soft">
             {compact ? "😴 윗줄: 일어난·잠든 시각" : "😴 이 줄에서 일어난 시각과 잠든 시각을 누르세요"}
@@ -137,18 +94,7 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick, o
         className="relative rounded-b border border-t-0 border-line bg-card"
         style={{ height: `${Math.max(lanes * layout.laneRem + 0.5, 3)}rem` }}
         data-testid="timeline-body"
-        {...pressHandlers("body")}
       >
-        {compact &&
-          hours.map((h) => (
-            <div
-              key={h.position}
-              className="pointer-events-none absolute inset-y-0 w-px bg-line/70"
-              style={{ left: pct(h.position) }}
-            />
-          ))}
-        {gridLines}
-        {pressedCell("body")}
         {onTimeClick && meals.length === 0 && (
           <p className="pointer-events-none absolute inset-0 grid place-items-center text-xs text-ink-soft">
             👆 먹은 시각쯤을 누르면 식사 기록
@@ -195,10 +141,10 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick, o
 }
 
 /** 누른 위치의 시각. 타임라인 전체 너비 기준으로 계산한다 */
-function timeAtPointer(e: React.MouseEvent<HTMLElement>, step: number, snap: "round" | "floor"): HHMM {
+function timeAtPointer(e: React.MouseEvent<HTMLElement>, step: number): HHMM {
   const root = (e.currentTarget.closest("[data-testid=timeline]") ?? e.currentTarget) as HTMLElement;
   const rect = root.getBoundingClientRect();
-  return timeFromTimelinePosition((e.clientX - rect.left) / rect.width, step, snap);
+  return timeFromTimelinePosition((e.clientX - rect.left) / rect.width, step);
 }
 
 function placeLabels(meals: Meal[], labelWidth: number) {
