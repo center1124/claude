@@ -93,7 +93,7 @@ export function WeekView({ date }: { date: ISODate }) {
             periodExpectedDate={periodDate}
           />
         ))}
-        <p className="mt-1 flex items-center gap-3 text-[11px] text-ink-soft">
+        <p className="mt-1 flex items-center gap-3 text-xs text-ink-soft">
           <span className="flex items-center gap-1">
             <span className="inline-block h-2 w-4 rounded-full bg-highlight" /> 수면
           </span>
@@ -154,8 +154,8 @@ function PhoneDayRow({
       >
         <span className={`text-center leading-tight ${isToday ? "font-bold text-pen" : "text-ink-soft"}`}>
           <span className="block text-xs">{weekdayKo(log.date)}</span>
-          <span className="block text-[10px]">{shortDate(log.date)}</span>
-          {sent && <span className="block text-[9px] text-pen">✓</span>}
+          <span className="block text-xs">{shortDate(log.date)}</span>
+          {sent && <span className="block text-xs text-pen">✓</span>}
         </span>
         <span className="grid gap-0.5">
           <Timeline variant="mini" meals={log.meals} wakeTime={log.morning.sleepEnd} bedTime={bedTime} />
@@ -267,7 +267,7 @@ function PaperDayRow({
       >
         <span className="font-medium">{weekdayEn(log.date)}</span>
         <span className="text-xs">{shortDate(log.date)}</span>
-        {sent && <span className="text-[10px] text-pen">보냄 ✓</span>}
+        {sent && <span className="text-xs text-pen">보냄 ✓</span>}
       </button>
 
       <table className="mt-5 w-full border-collapse overflow-hidden rounded bg-card text-xs">

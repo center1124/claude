@@ -19,4 +19,4 @@ export function Loading() {
 }
 
 export const inputClass =
-  "w-full min-w-0 rounded-lg border border-line bg-paper px-3 py-2 text-pen placeholder:text-ink-soft/60 focus:border-pen focus:outline-none";
+  "w-full min-w-0 rounded-lg border text-base border-line bg-paper px-3 py-2 text-pen placeholder:text-ink-soft/60 focus:border-pen focus:outline-none";

@@ -65,14 +65,14 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, variant = "ful
             style={{ left: pct(position), top: `${lane * LANE_REM[variant]}rem` }}
           >
             <span className="h-3 w-px bg-pen" aria-hidden />
-            <span className="-mt-1 text-[10px] text-pen" aria-hidden>
+            <span className="-mt-1 text-xs text-pen" aria-hidden>
               ▼
             </span>
             {compact ? (
-              <span className="text-[10px] font-medium text-ink">{meal.time}</span>
+              <span className="text-xs font-medium text-ink">{meal.time}</span>
             ) : (
               <>
-                <span className="text-[11px] text-ink-soft">{meal.time}</span>
+                <span className="text-xs text-ink-soft">{meal.time}</span>
                 <span className="line-clamp-2 whitespace-pre-line text-xs text-pen">
                   {meal.description || "사진"}
                   {meal.photoIds.length > 0 && meal.description ? " 📷" : ""}
@@ -90,7 +90,7 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, variant = "ful
 /** 정각 숫자 줄: 7 8 9 … 12 1 */
 export function TimelineHours({ small }: { small?: boolean }) {
   return (
-    <div className={`relative h-5 text-ink-soft ${small ? "text-[9px]" : "text-[11px]"}`}>
+    <div className={`relative h-5 text-ink-soft ${small ? "text-[11px]" : "text-xs"}`}>
       {timelineHours().map((h) => (
         <span key={h.position} className="absolute -translate-x-1/2" style={{ left: pct(h.position) }}>
           {h.label}
