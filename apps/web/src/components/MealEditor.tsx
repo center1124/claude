@@ -6,6 +6,7 @@ import {
   MEAL_TIME_PRESETS,
   mealTimeFromPhoto,
   nowHHMM,
+  shiftTime,
   similarTimeMeal,
   type DailyLog,
   toHHMM,
@@ -217,14 +218,37 @@ export function MealEditor({
             <label htmlFor="meal-time" className="text-sm font-medium">
               먹은 시각
             </label>
-            <input
-              id="meal-time"
-              type="time"
-              className={`${inputClass} ${timeSource === "missing" && !draft.time ? "border-pen" : ""}`}
-              value={draft.time}
-              onChange={(e) => setTime(e.target.value)}
-            />
+            <div className="flex min-w-0 gap-1.5">
+              <input
+                id="meal-time"
+                type="time"
+                className={`${inputClass} flex-1 ${timeSource === "missing" && !draft.time ? "border-pen" : ""}`}
+                value={draft.time}
+                onChange={(e) => setTime(e.target.value)}
+              />
+              {draft.time && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setTime(shiftTime(draft.time, -10), timeSource)}
+                    className="shrink-0 rounded-lg border border-line px-2.5 text-xs"
+                  >
+                    −10분
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTime(shiftTime(draft.time, 10), timeSource)}
+                    className="shrink-0 rounded-lg border border-line px-2.5 text-xs"
+                  >
+                    +10분
+                  </button>
+                </>
+              )}
+            </div>
             {timeSource === "photo" && <p className="text-xs text-ink-soft">📷 사진을 찍은 시각이에요.</p>}
+            {timeSource === "tap" && (
+              <p className="text-xs text-ink-soft">👆 누른 위치의 시각이에요. 다르면 ±10분으로 맞춰주세요.</p>
+            )}
             {timeSource === "missing" && !draft.time && (
               <p className="text-xs text-pen">사진에 찍은 시각 정보가 없어요. 아래 버튼이나 시계로 골라주세요.</p>
             )}

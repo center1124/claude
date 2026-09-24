@@ -4,6 +4,7 @@ import {
   groupPhotosIntoMeals,
   parseDayText,
   similarTimeMeal,
+  shiftTime,
   sleepTapTarget,
   timeFromTimelinePosition,
   type DailyLog,
@@ -94,5 +95,19 @@ describe("수면 줄 누르기", () => {
     expect(sleepTapTarget("13:50")).toBe("wake");
     expect(sleepTapTarget("23:40")).toBe("bed");
     expect(sleepTapTarget("00:30")).toBe("bed");
+  });
+});
+
+describe("±10분", () => {
+  it("앞뒤로 옮기고 자정을 넘으면 돌아간다", () => {
+    expect(shiftTime("12:30", 10)).toBe("12:40");
+    expect(shiftTime("00:05", -10)).toBe("23:55");
+  });
+});
+
+describe("30분 단위로 누르기", () => {
+  it("폰 타임라인은 30분 단위로 잡는다", () => {
+    expect(timeFromTimelinePosition(0.34, 30)).toBe("13:00"); // 12:48 → 13:00
+    expect(timeFromTimelinePosition(0.32, 30)).toBe("12:30"); // 12:24 → 12:30
   });
 });

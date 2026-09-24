@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  formatDuration,
-  periodDday,
-  sleepMinutes,
-  type ISODate,
-  type MorningCheck,
-} from "@diet/core";
+import { periodDday, type ISODate, type MorningCheck } from "@diet/core";
 import { Card, inputClass } from "./ui";
 
 interface Props {
@@ -28,69 +22,15 @@ export function MorningCheckCard({
   periodExpectedDate,
   onChange,
 }: Props) {
+  // 수면은 타임라인 윗줄에서 기록한다 (여기서는 체중·허리·화장실·생리만)
   const set = <K extends keyof MorningCheck>(key: K, value: MorningCheck[K]) =>
     onChange({ ...morning, [key]: value });
 
-  const sleep =
-    morning.sleepStart && morning.sleepEnd ? formatDuration(sleepMinutes(morning.sleepStart, morning.sleepEnd)) : null;
   const dday = periodDday(date, periodExpectedDate);
 
   return (
     <Card title="아침 체크" action={<span className="text-xs text-ink-soft">일어나서 바로 적어요</span>}>
       <div className="grid gap-4">
-        <div>
-          <div className="mb-1.5 flex items-baseline justify-between">
-            <span className="text-sm font-medium">총 수면량</span>
-            <span className="text-lg font-bold text-pen">{sleep ?? "–"}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
-              <span className="flex items-center justify-between">
-                <label htmlFor="sleepStart">어젯밤 잠든 시각</label>
-                {morning.sleepStart && (
-                  <button
-                    type="button"
-                    aria-label="어젯밤 잠든 시각 지우기"
-                    onClick={() => set("sleepStart", undefined)}
-                    className="underline"
-                  >
-                    지우기
-                  </button>
-                )}
-              </span>
-              <input
-                id="sleepStart"
-                type="time"
-                className={inputClass}
-                value={morning.sleepStart ?? ""}
-                onChange={(e) => set("sleepStart", e.target.value || undefined)}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
-              <span className="flex items-center justify-between">
-                <label htmlFor="sleepEnd">오늘 일어난 시각</label>
-                {morning.sleepEnd && (
-                  <button
-                    type="button"
-                    aria-label="오늘 일어난 시각 지우기"
-                    onClick={() => set("sleepEnd", undefined)}
-                    className="underline"
-                  >
-                    지우기
-                  </button>
-                )}
-              </span>
-              <input
-                id="sleepEnd"
-                type="time"
-                className={inputClass}
-                value={morning.sleepEnd ?? ""}
-                onChange={(e) => set("sleepEnd", e.target.value || undefined)}
-              />
-            </div>
-          </div>
-        </div>
-
         <div className="grid grid-cols-2 gap-2">
           <MeasureField
             label="체중"

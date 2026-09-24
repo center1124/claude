@@ -7,6 +7,7 @@ import {
   compareTimelineTime,
   COMPANION_LABELS,
   formatDateKo,
+  formatDuration,
   frequentFoods,
   groupPhotosIntoMeals,
   hasContent,
@@ -14,6 +15,8 @@ import {
   mealTimeFromPhoto,
   missingMealSlots,
   recentMeals,
+  shiftTime,
+  sleepMinutes,
   sleepTapTarget,
   submissionState,
   type DailyLog,
@@ -64,6 +67,16 @@ export function DayView({ date }: { date: ISODate }) {
     if (!log) return;
     const exists = log.meals.some((m) => m.id === meal.id);
     update({ ...log, meals: exists ? log.meals.map((m) => (m.id === meal.id ? meal : m)) : [...log.meals, meal] });
+  }
+
+  /** 오늘 아침 일어난 시각 (이 날 기록) */
+  function setWake(time: HHMM | undefined) {
+    if (log) update({ ...log, morning: { ...log.morning, sleepEnd: time } });
+  }
+
+  /** 오늘 밤 잠든 시각 (수면이 끝나는 다음 날 기록에 저장) */
+  function setBed(time: HHMM | undefined) {
+    if (nextLog) updateNext({ ...nextLog, morning: { ...nextLog.morning, sleepStart: time } });
   }
 
   function deleteMeal(id: string) {
@@ -199,31 +212,29 @@ export function DayView({ date }: { date: ISODate }) {
           </p>
         )}
 
-        <p className="mb-1 text-xs leading-relaxed text-ink-soft">
-          👆 <b>윗줄</b>을 누르면 일어난·잠든 시각, <b>아래 칸</b>을 누르면 그 시각의 식사가 기록돼요. 옆으로 밀면
-          저녁 시간이 보여요.
+        <p className="mb-2 text-xs leading-relaxed text-ink-soft">
+          👆 <b>윗줄</b>을 누르면 일어난·잠든 시각, <b>아래 칸</b>을 누르면 그 시각의 식사가 기록돼요.
         </p>
-        <div className="-mx-4 overflow-x-auto px-4 pb-2">
-          <div className="min-w-[720px]">
-            <Timeline
-              meals={log.meals}
-              wakeTime={log.morning.sleepEnd}
-              bedTime={nextLog.morning.sleepStart}
-              onMealClick={(meal) => setEditing({ meal })}
-              onTimeClick={(time) => setEditing({ seed: { time, timeSource: "tap" } })}
-              onSleepClick={(time) =>
-                sleepTapTarget(time) === "wake"
-                  ? update({ ...log, morning: { ...log.morning, sleepEnd: time } })
-                  : updateNext({ ...nextLog, morning: { ...nextLog.morning, sleepStart: time } })
-              }
-            />
-          </div>
-        </div>
-        <SleepChips
+        <Timeline
+          compact
+          meals={log.meals}
           wakeTime={log.morning.sleepEnd}
           bedTime={nextLog.morning.sleepStart}
-          onClearWake={() => update({ ...log, morning: { ...log.morning, sleepEnd: undefined } })}
-          onClearBed={() => updateNext({ ...nextLog, morning: { ...nextLog.morning, sleepStart: undefined } })}
+          onMealClick={(meal) => setEditing({ meal })}
+          onTimeClick={(time) => setEditing({ seed: { time, timeSource: "tap" } })}
+          onSleepClick={(time) =>
+            sleepTapTarget(time) === "wake"
+              ? setWake(time)
+              : setBed(time)
+          }
+        />
+        <SleepSummary
+          date={date}
+          lastNightStart={log.morning.sleepStart}
+          wakeTime={log.morning.sleepEnd}
+          bedTime={nextLog.morning.sleepStart}
+          onChangeWake={setWake}
+          onChangeBed={setBed}
         />
 
         {meals.length === 0 ? (
@@ -298,38 +309,72 @@ export function DayView({ date }: { date: ISODate }) {
   );
 }
 
-/** 타임라인에 기록된 수면 시각. ✕로 지운다 */
-function SleepChips({
+/**
+ * 타임라인 아래 수면 요약: 오늘 일어난 시각, 오늘 밤 잠든 시각(±10분, 지우기)과
+ * 총 수면량(어젯밤 잠든 시각 → 오늘 일어난 시각).
+ */
+function SleepSummary({
+  date,
+  lastNightStart,
   wakeTime,
   bedTime,
-  onClearWake,
-  onClearBed,
+  onChangeWake,
+  onChangeBed,
 }: {
+  date: ISODate;
+  lastNightStart?: HHMM;
   wakeTime?: HHMM;
   bedTime?: HHMM;
-  onClearWake: () => void;
-  onClearBed: () => void;
+  onChangeWake: (time: HHMM | undefined) => void;
+  onChangeBed: (time: HHMM | undefined) => void;
 }) {
   if (!wakeTime && !bedTime) return null;
   return (
-    <div className="mb-1 flex flex-wrap gap-1.5 text-xs">
-      {wakeTime && (
-        <span className="flex items-center gap-1 rounded-full bg-highlight/50 py-1 pl-3 pr-1">
-          ☀️ 일어남 <b>{wakeTime}</b>
-          <button type="button" aria-label="일어난 시각 지우기" onClick={onClearWake} className="px-1.5">
-            ✕
-          </button>
-        </span>
-      )}
-      {bedTime && (
-        <span className="flex items-center gap-1 rounded-full bg-highlight/50 py-1 pl-3 pr-1">
-          🌙 잠듦 <b>{bedTime}</b>
-          <button type="button" aria-label="잠든 시각 지우기" onClick={onClearBed} className="px-1.5">
-            ✕
-          </button>
-        </span>
-      )}
+    <div className="mt-2 grid gap-1.5 text-xs">
+      <div className="flex flex-wrap gap-1.5">
+        {wakeTime && <SleepChip icon="☀️" label="일어남" time={wakeTime} onChange={onChangeWake} />}
+        {bedTime && <SleepChip icon="🌙" label="잠듦" time={bedTime} onChange={onChangeBed} />}
+      </div>
+      {wakeTime &&
+        (lastNightStart ? (
+          <p className="text-ink-soft">
+            총 수면 <b className="text-pen">{formatDuration(sleepMinutes(lastNightStart, wakeTime))}</b> (어젯밤{" "}
+            {lastNightStart} 잠듦)
+          </p>
+        ) : (
+          <Link href={`/day/${addDays(date, -1)}`} className="text-ink-soft underline">
+            어젯밤 잠든 시각이 없어요. 어제 타임라인 윗줄에서 눌러주세요 ›
+          </Link>
+        ))}
     </div>
+  );
+}
+
+function SleepChip({
+  icon,
+  label,
+  time,
+  onChange,
+}: {
+  icon: string;
+  label: string;
+  time: HHMM;
+  onChange: (time: HHMM | undefined) => void;
+}) {
+  const small = "grid h-6 w-6 place-items-center rounded-full bg-card";
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-highlight/50 py-1 pl-3 pr-1">
+      {icon} {label} <b className="mr-1">{time}</b>
+      <button type="button" aria-label={`${label} 10분 앞으로`} onClick={() => onChange(shiftTime(time, -10))} className={small}>
+        −
+      </button>
+      <button type="button" aria-label={`${label} 10분 뒤로`} onClick={() => onChange(shiftTime(time, 10))} className={small}>
+        +
+      </button>
+      <button type="button" aria-label={`${label} 시각 지우기`} onClick={() => onChange(undefined)} className="px-1.5">
+        ✕
+      </button>
+    </span>
   );
 }
 

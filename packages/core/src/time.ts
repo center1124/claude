@@ -104,3 +104,8 @@ export const SLEEP_TAP_SPLIT = 14 * 60;
 export function sleepTapTarget(time: HHMM): "wake" | "bed" {
   return timelineMinutes(time) < SLEEP_TAP_SPLIT ? "wake" : "bed";
 }
+
+/** 시각을 분 단위로 앞뒤로 옮긴다 (자정을 넘으면 돌아간다). ±10분 버튼용 */
+export function shiftTime(time: HHMM, minutes: number): HHMM {
+  return toHHMM(parseHHMM(time) + minutes);
+}
