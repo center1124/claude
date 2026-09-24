@@ -44,18 +44,28 @@ export class LocalDiaryRepository implements DiaryRepository {
 
   async savePhoto(file: Blob): Promise<string> {
     const id = crypto.randomUUID();
-    await set(photoKey(id), file, this.store);
+    // 아이폰 Safari는 Blob을 IndexedDB에 넣다가 실패하는 경우가 있어 바이트 배열로 저장한다
+    const stored: StoredPhoto = { type: file.type || "image/jpeg", data: await file.arrayBuffer() };
+    await set(photoKey(id), stored, this.store);
     return id;
   }
 
   async getPhotoUrl(photoId: string): Promise<string | null> {
-    const blob = await get<Blob>(photoKey(photoId), this.store);
-    return blob ? URL.createObjectURL(blob) : null;
+    const stored = await get<StoredPhoto | Blob>(photoKey(photoId), this.store);
+    if (!stored) return null;
+    const blob = stored instanceof Blob ? stored : new Blob([stored.data], { type: stored.type });
+    return URL.createObjectURL(blob);
   }
 
   async deletePhoto(photoId: string): Promise<void> {
     await del(photoKey(photoId), this.store);
   }
+}
+
+/** 사진 저장 형식. 예전 버전은 Blob을 그대로 저장했으므로 읽을 때 둘 다 받는다 */
+interface StoredPhoto {
+  type: string;
+  data: ArrayBuffer;
 }
 
 const logKey = (date: ISODate) => `log:${date}`;
