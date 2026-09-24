@@ -24,7 +24,7 @@ import {
   type Meal,
   type MealSlot,
 } from "@diet/core";
-import { importPhoto } from "@/lib/image";
+import { importPhoto, photoErrorMessage } from "@/lib/image";
 import { useDailyLog, useLogs, useProfile, useRepository } from "@/lib/repository";
 import { useToday } from "@/lib/use-today";
 import { Logo } from "./Logo";
@@ -80,6 +80,7 @@ export function DayView({ date }: { date: ISODate }) {
   async function startWithPhotos(files: FileList | null) {
     if (!files?.length || !log) return;
     setImporting(true);
+    setNotice(null);
     try {
       const imported = await Promise.all(Array.from(files).map((f) => importPhoto(repo, f)));
       const withTime = imported.map((p) => ({
@@ -108,6 +109,8 @@ export function DayView({ date }: { date: ISODate }) {
       update({ ...log, meals: [...log.meals, ...created] });
       setNotice(`사진을 찍은 시각별로 식사 ${created.length}개로 나눴어요. 눌러서 먹은 것을 적어주세요.`);
       if (untimed) setEditing({ seed: seedOf(untimed) });
+    } catch (error) {
+      setNotice(photoErrorMessage(error));
     } finally {
       setImporting(false);
       if (photoInput.current) photoInput.current.value = "";
@@ -198,6 +201,9 @@ export function DayView({ date }: { date: ISODate }) {
           </p>
         )}
 
+        <p className="mb-1 text-xs text-ink-soft">
+          👆 타임라인에서 먹은 시각을 누르면 그 시각으로 바로 기록돼요. 옆으로 밀면 저녁 시간이 보여요.
+        </p>
         <div className="-mx-4 overflow-x-auto px-4 pb-2">
           <div className="min-w-[720px]">
             <Timeline
@@ -401,3 +407,4 @@ function DateNavLink({ date, label, icon }: { date: ISODate; label: string; icon
     </Link>
   );
 }
+

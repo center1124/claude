@@ -33,7 +33,18 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick }:
   const lanes = Math.max(1, ...placed.map((p) => p.lane + 1));
 
   return (
-    <div className="relative select-none">
+    <div
+      className={`relative select-none ${onTimeClick ? "cursor-copy" : ""}`}
+      // 시간 숫자, 수면 줄, 아래 칸 어디를 눌러도 그 시각으로 기록한다
+      onClick={
+        onTimeClick &&
+        ((e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          onTimeClick(timeFromTimelinePosition((e.clientX - rect.left) / rect.width));
+        })
+      }
+      data-testid="timeline"
+    >
       <div className="relative h-5 text-[11px] text-ink-soft">
         {hours.map((h) => (
           <span key={h.position} className="absolute -translate-x-1/2" style={{ left: pct(h.position) }}>
@@ -56,20 +67,13 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick }:
       </div>
 
       <div
-        className={`relative rounded-b border border-t-0 border-line bg-card ${onTimeClick ? "cursor-copy" : ""}`}
+        className="relative rounded-b border border-t-0 border-line bg-card"
         style={{ height: `${lanes * 5.25 + 0.75}rem` }}
-        onClick={
-          onTimeClick &&
-          ((e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            onTimeClick(timeFromTimelinePosition((e.clientX - rect.left) / rect.width));
-          })
-        }
         data-testid="timeline-body"
       >
         {onTimeClick && meals.length === 0 && (
           <p className="pointer-events-none absolute inset-0 grid place-items-center text-xs text-ink-soft">
-            먹은 시각쯤을 눌러서 바로 기록하세요
+            👆 먹은 시각쯤을 누르면 바로 기록돼요
           </p>
         )}
         {placed.map(({ meal, position, lane }) => (

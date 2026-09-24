@@ -42,3 +42,9 @@ export async function importPhoto(
   const id = await repo.savePhoto(await compressImage(file));
   return { id, takenAt };
 }
+
+/** 사진 저장 실패 원인을 고객이 알 수 있게 (문제 신고 시 그대로 전달받기 위해 원문도 붙인다) */
+export function photoErrorMessage(error: unknown): string {
+  const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  return `사진을 저장하지 못했어요. 카카오톡 안에서 열었다면 Safari나 Chrome으로 열어 주세요. (${detail})`;
+}

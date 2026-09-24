@@ -14,7 +14,7 @@ import {
   type ISODate,
   type Meal,
 } from "@diet/core";
-import { importPhoto } from "@/lib/image";
+import { importPhoto, photoErrorMessage } from "@/lib/image";
 import { useRepository } from "@/lib/repository";
 import { Photo } from "./Photo";
 import { inputClass } from "./ui";
@@ -74,6 +74,7 @@ export function MealEditor({
   const [addedPhotos, setAddedPhotos] = useState<string[]>(seed?.photoIds ?? []);
   const [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const canSave = draft.time && (draft.description.trim() || draft.photoIds.length > 0);
@@ -98,6 +99,7 @@ export function MealEditor({
   async function addPhotos(files: FileList | null) {
     if (!files?.length) return;
     setUploading(true);
+    setPhotoError(null);
     try {
       const imported = await Promise.all(Array.from(files).map((f) => importPhoto(repo, f)));
       const ids = imported.map((p) => p.id);
@@ -109,6 +111,8 @@ export function MealEditor({
       setDraft((d) => ({ ...d, photoIds: [...d.photoIds, ...ids] }));
       // 첫 사진이면 촬영 시각을 먹은 시각으로
       if (firstPhotos && photoTime) setTime(photoTime, "photo");
+    } catch (error) {
+      setPhotoError(photoErrorMessage(error));
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -199,7 +203,12 @@ export function MealEditor({
                 onChange={(e) => addPhotos(e.target.files)}
               />
             </div>
-            {draft.photoIds.length === 0 && (
+            {photoError && (
+              <p role="alert" className="mt-1.5 text-xs text-pen">
+                {photoError}
+              </p>
+            )}
+            {draft.photoIds.length === 0 && !photoError && (
               <p className="mt-1.5 text-xs text-ink-soft">사진이 없어도 괜찮아요. 나중에 추가할 수도 있어요.</p>
             )}
           </div>
