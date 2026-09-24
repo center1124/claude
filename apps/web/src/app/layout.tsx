@@ -19,10 +19,13 @@ const script = Great_Vibes({
 export const metadata: Metadata = {
   title: "Diet Design",
   description: "다이어트 디자인 — 하루 기록과 코칭",
+  // 아이폰 홈 화면에 추가했을 때 주소창 없이 앱처럼 열리게
+  appleWebApp: { capable: true, title: "Diet Design", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
   themeColor: "#fbf8f3",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

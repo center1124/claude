@@ -17,7 +17,10 @@ export function useRepository(): DiaryRepository {
   return repo;
 }
 
-/** 하루 기록을 불러오고, 바뀔 때마다 바로 저장한다 */
+/**
+ * 하루 기록을 불러오고, 바뀔 때마다 바로 저장한다.
+ * 내용을 고치면 updatedAt을 찍는다. 보내기처럼 내용이 그대로인 변경은 stamp: false.
+ */
 export function useDailyLog(date: ISODate) {
   const repo = useRepository();
   const [log, setLog] = useState<DailyLog | null>(null);
@@ -31,9 +34,10 @@ export function useDailyLog(date: ISODate) {
   }, [repo, date]);
 
   const update = useCallback(
-    (next: DailyLog) => {
-      setLog(next);
-      void repo.saveLog(next);
+    (next: DailyLog, { stamp = true } = {}) => {
+      const stamped = stamp ? { ...next, updatedAt: new Date().toISOString() } : next;
+      setLog(stamped);
+      void repo.saveLog(stamped);
     },
     [repo],
   );

@@ -8,6 +8,7 @@ import {
   periodDday,
   sleepMinutes,
   startOfWeek,
+  submissionState,
   weekdayEn,
   type DailyLog,
   type ISODate,
@@ -51,7 +52,8 @@ export function WeekView({ date }: { date: ISODate }) {
               log={log}
               bedTime={logs[i + 1].morning.sleepStart}
               isToday={log.date === today}
-              periodExpectedDate={profile.periodExpectedDate}
+              periodExpectedDate={profile.periodTracking === false ? undefined : profile.periodExpectedDate}
+              periodTracking={profile.periodTracking !== false}
               onOpen={() => router.push(`/day/${log.date}`)}
             />
           ))}
@@ -67,12 +69,14 @@ function DayRow({
   bedTime,
   isToday,
   periodExpectedDate,
+  periodTracking,
   onOpen,
 }: {
   log: DailyLog;
   bedTime?: string;
   isToday: boolean;
   periodExpectedDate?: ISODate;
+  periodTracking: boolean;
   onOpen: () => void;
 }) {
   const { morning } = log;
@@ -81,8 +85,9 @@ function DayRow({
     ["체중", morning.weightKg?.toString()],
     ["허리 둘레", morning.waistCm?.toString()],
     ["화장실", morning.bowelCount?.toString()],
-    ["생리", periodDday(log.date, periodExpectedDate) ?? undefined],
   ];
+  if (periodTracking) stats.push(["생리", periodDday(log.date, periodExpectedDate) ?? undefined]);
+  const sent = submissionState(log).kind === "sent";
 
   return (
     <div className="grid grid-cols-[3.5rem_9.5rem_1fr] items-start gap-2">
@@ -93,7 +98,7 @@ function DayRow({
       >
         <span className="font-medium">{weekdayEn(log.date)}</span>
         <span className="text-xs">{shortDate(log.date)}</span>
-        {log.submittedAt && <span className="text-[10px] text-pen">보냄 ✓</span>}
+        {sent && <span className="text-[10px] text-pen">보냄 ✓</span>}
       </button>
 
       <table className="mt-5 w-full border-collapse overflow-hidden rounded bg-card text-xs">

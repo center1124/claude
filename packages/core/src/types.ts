@@ -15,6 +15,15 @@ export interface MorningCheck {
   bowelCount?: number;
 }
 
+/** 누구와 먹었는지. 없으면 혼자 */
+export type Companion = "family" | "friends" | "work";
+
+export const COMPANION_LABELS: Record<Companion, string> = {
+  family: "가족",
+  friends: "친구",
+  work: "동료·회식",
+};
+
 export interface Meal {
   id: string;
   time: HHMM;
@@ -24,18 +33,29 @@ export interface Meal {
   fullness?: number;
   /** 사진 참조 (저장소가 해석하는 키 또는 URL) */
   photoIds: string[];
+  companion?: Companion;
+  /** 함께 나눠 먹었을 때 내가 먹은 양. 예: "2조각", "1/3" */
+  myPortion?: string;
 }
 
 export interface DailyLog {
   date: ISODate;
   morning: MorningCheck;
   meals: Meal[];
-  /** 코치에게 제출한 시각 (ISO 8601) */
+  /** 고객이 "지금 보내기"를 누른 시각 (ISO 8601). 없으면 다음 날 오전 9시에 자동으로 보낸다 */
   submittedAt?: string;
+  /** 마지막으로 고친 시각 (ISO 8601). 보낸 뒤 고쳤는지 코치에게 알려줄 때 쓴다 */
+  updatedAt?: string;
+  /** "안 먹었어요"로 확인한 끼니 */
+  skippedMeals?: MealSlot[];
 }
+
+export type MealSlot = "breakfast" | "lunch" | "dinner";
 
 export interface ClientProfile {
   name: string;
+  /** 생리 기록 사용 여부 (없으면 사용) */
+  periodTracking?: boolean;
   /** 다음 생리 예정일 */
   periodExpectedDate?: ISODate;
 }
