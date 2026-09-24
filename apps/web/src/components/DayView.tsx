@@ -9,6 +9,7 @@ import {
   COMPANION_LABELS,
   formatDateKo,
   frequentFoods,
+  groupPhotosIntoMeals,
   hasContent,
   MEAL_SLOT_LABELS,
   mealTimeFromPhoto,
@@ -18,6 +19,7 @@ import {
   submissionState,
   type DailyLog,
   type HHMM,
+  type ParsedMeal,
   type ISODate,
   type Meal,
   type MealSlot,
@@ -26,13 +28,14 @@ import { importPhoto } from "@/lib/image";
 import { useDailyLog, useLogs, useProfile, useRepository } from "@/lib/repository";
 import { useToday } from "@/lib/use-today";
 import { Logo } from "./Logo";
-import { MealEditor } from "./MealEditor";
+import { BulkEntry } from "./BulkEntry";
+import { MealEditor, type MealSeed } from "./MealEditor";
 import { MorningCheckCard } from "./MorningCheckCard";
 import { Photo } from "./Photo";
 import { Timeline } from "./Timeline";
 import { Card, Loading } from "./ui";
 
-type Editing = { meal?: Meal; seed?: { photoIds: string[]; time?: HHMM } } | null;
+type Editing = { meal?: Meal; seed?: MealSeed } | null;
 
 export function DayView({ date }: { date: ISODate }) {
   const repo = useRepository();
@@ -45,6 +48,8 @@ export function DayView({ date }: { date: ISODate }) {
   const { profile } = useProfile();
   const [editing, setEditing] = useState<Editing>(null);
   const [importing, setImporting] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
 
   if (!log || !nextLog || !profile || !pastLogs) return <Loading />;
@@ -67,18 +72,53 @@ export function DayView({ date }: { date: ISODate }) {
     update({ ...log, meals: log.meals.filter((m) => m.id !== id) });
   }
 
-  /** 사진부터 고르면 저장해 두고, 촬영 시각을 채운 식사 입력 창을 연다 */
+  /**
+   * 사진부터 고르면 저장해 두고 촬영 시각으로 식사를 나눈다.
+   * 한 끼면 입력 창을 열고, 여러 끼면 시각이 있는 식사는 바로 만들어 두고
+   * 시각을 모르는 사진(다른 날 사진 포함)만 입력 창에서 시각을 고르게 한다.
+   */
   async function startWithPhotos(files: FileList | null) {
-    if (!files?.length) return;
+    if (!files?.length || !log) return;
     setImporting(true);
     try {
       const imported = await Promise.all(Array.from(files).map((f) => importPhoto(repo, f)));
-      const time = imported.map((p) => mealTimeFromPhoto(p.takenAt, date)).find(Boolean) ?? undefined;
-      setEditing({ seed: { photoIds: imported.map((p) => p.id), time } });
+      const withTime = imported.map((p) => ({
+        ...p,
+        takenAt: p.takenAt && mealTimeFromPhoto(p.takenAt, date) ? p.takenAt : null,
+      }));
+      const groups = groupPhotosIntoMeals(withTime);
+      const timed = groups.filter((g) => g.takenAt);
+      const untimed = groups.find((g) => !g.takenAt);
+      const seedOf = (g: (typeof groups)[number]): MealSeed => ({
+        photoIds: g.items.map((i) => i.id),
+        time: g.takenAt ? mealTimeFromPhoto(g.takenAt, date)! : undefined,
+        timeSource: g.takenAt ? "photo" : "missing",
+      });
+
+      if (groups.length === 1) {
+        setEditing({ seed: seedOf(groups[0]) });
+        return;
+      }
+      const created: Meal[] = timed.map((g) => ({
+        id: crypto.randomUUID(),
+        time: seedOf(g).time!,
+        description: "",
+        photoIds: seedOf(g).photoIds!,
+      }));
+      update({ ...log, meals: [...log.meals, ...created] });
+      setNotice(`사진을 찍은 시각별로 식사 ${created.length}개로 나눴어요. 눌러서 먹은 것을 적어주세요.`);
+      if (untimed) setEditing({ seed: seedOf(untimed) });
     } finally {
       setImporting(false);
       if (photoInput.current) photoInput.current.value = "";
     }
+  }
+
+  function saveBulk(parsed: ParsedMeal[]) {
+    if (!log) return;
+    const created = parsed.map((m) => ({ id: crypto.randomUUID(), photoIds: [], ...m }));
+    update({ ...log, meals: [...log.meals, ...created] });
+    setNotice(`식사 ${created.length}개를 기록했어요. 사진은 각 식사를 눌러 추가할 수 있어요.`);
   }
 
   const showYesterdayReminder =
@@ -114,37 +154,50 @@ export function DayView({ date }: { date: ISODate }) {
         onChange={(morning) => update({ ...log, morning })}
       />
 
-      <Card
-        title="식사 기록"
-        action={
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => photoInput.current?.click()}
-              disabled={importing}
-              className="rounded-full bg-pen px-4 py-1.5 text-sm font-bold text-white disabled:opacity-50"
-            >
-              {importing ? "올리는 중…" : "📷 사진으로"}
+      <Card title="식사 기록">
+        <div className="mb-3 grid grid-cols-3 gap-1.5">
+          <button
+            type="button"
+            onClick={() => photoInput.current?.click()}
+            disabled={importing}
+            className="rounded-xl bg-pen py-2.5 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {importing ? "올리는 중…" : "📷 사진으로"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing({})}
+            className="rounded-xl border border-pen py-2.5 text-sm font-bold text-pen"
+          >
+            ✎ 글로
+          </button>
+          <button
+            type="button"
+            onClick={() => setBulkOpen(true)}
+            className="rounded-xl border border-pen py-2.5 text-sm font-bold text-pen"
+          >
+            ☰ 한 번에
+          </button>
+          <input
+            ref={photoInput}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            aria-label="식사 사진 고르기"
+            onChange={(e) => startWithPhotos(e.target.files)}
+          />
+        </div>
+
+        {notice && (
+          <p role="status" className="mb-3 flex items-start justify-between gap-2 rounded-xl bg-highlight/40 px-3 py-2 text-xs">
+            {notice}
+            <button type="button" aria-label="알림 닫기" onClick={() => setNotice(null)} className="shrink-0">
+              ✕
             </button>
-            <button
-              type="button"
-              onClick={() => setEditing({})}
-              className="rounded-full border border-pen px-3 py-1.5 text-sm font-bold text-pen"
-            >
-              + 글로
-            </button>
-            <input
-              ref={photoInput}
-              type="file"
-              accept="image/*"
-              multiple
-              hidden
-              aria-label="식사 사진 고르기"
-              onChange={(e) => startWithPhotos(e.target.files)}
-            />
-          </div>
-        }
-      >
+          </p>
+        )}
+
         <div className="-mx-4 overflow-x-auto px-4 pb-2">
           <div className="min-w-[720px]">
             <Timeline
@@ -152,15 +205,16 @@ export function DayView({ date }: { date: ISODate }) {
               wakeTime={log.morning.sleepEnd}
               bedTime={nextLog.morning.sleepStart}
               onMealClick={(meal) => setEditing({ meal })}
+              onTimeClick={(time) => setEditing({ seed: { time, timeSource: "tap" } })}
             />
           </div>
         </div>
 
         {meals.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-soft">
-            먹을 때 사진만 찍어 두세요.
+            먹을 때 사진만 찍어 두면 찍은 시각이 자동으로 기록돼요.
             <br />
-            찍은 시각이 자동으로 기록돼요.
+            타임라인에서 먹은 시각쯤을 눌러도 돼요.
           </p>
         ) : (
           <ul className="mt-3 grid gap-2">
@@ -173,7 +227,11 @@ export function DayView({ date }: { date: ISODate }) {
                 >
                   <span className="w-12 shrink-0 pt-0.5 text-sm font-bold">{meal.time}</span>
                   <span className="grid flex-1 gap-2">
-                    {meal.description && <span className="whitespace-pre-line text-pen">{meal.description}</span>}
+                    {meal.description ? (
+                      <span className="whitespace-pre-line text-pen">{meal.description}</span>
+                    ) : (
+                      <span className="text-sm text-ink-soft underline">눌러서 먹은 것 적기</span>
+                    )}
                     {meal.companion && (
                       <span className="text-xs text-ink-soft">
                         함께: {COMPANION_LABELS[meal.companion]}
@@ -217,12 +275,15 @@ export function DayView({ date }: { date: ISODate }) {
         onSubmit={() => update({ ...log, submittedAt: new Date().toISOString() }, { stamp: false })}
       />
 
+      {bulkOpen && <BulkEntry onSave={saveBulk} onClose={() => setBulkOpen(false)} />}
+
       {editing && (
         <MealEditor
           date={date}
           isToday={isToday}
           meal={editing.meal}
           seed={editing.seed}
+          pastLogs={pastLogs}
           frequentFoods={frequentFoods(historyLogs)}
           recentMeals={recentMeals(historyLogs)}
           onSave={saveMeal}

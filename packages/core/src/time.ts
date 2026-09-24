@@ -81,3 +81,19 @@ export function timelineHours(): { label: string; position: number }[] {
   }
   return hours;
 }
+
+/** 타임라인 위 위치(0~1)를 시각으로. step분 단위로 반올림한다 (타임라인을 눌러 기록할 때) */
+export function timeFromTimelinePosition(fraction: number, step = 10): HHMM {
+  const clamped = Math.min(Math.max(fraction, 0), 1);
+  const minutes = TIMELINE_START + clamped * (TIMELINE_END - TIMELINE_START);
+  return toHHMM(Math.round(minutes / step) * step);
+}
+
+/** 끼니 버튼: 누르면 대표 시각이 들어가고, 필요하면 고친다 */
+export const MEAL_TIME_PRESETS: { label: string; time: HHMM }[] = [
+  { label: "아침", time: "08:00" },
+  { label: "점심", time: "12:30" },
+  { label: "간식", time: "15:30" },
+  { label: "저녁", time: "19:00" },
+  { label: "야식", time: "22:30" },
+];

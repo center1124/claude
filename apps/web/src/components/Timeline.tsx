@@ -1,6 +1,14 @@
 "use client";
 
-import { compareTimelineTime, sleepSegments, timelineHours, timelinePosition, type HHMM, type Meal } from "@diet/core";
+import {
+  compareTimelineTime,
+  sleepSegments,
+  timeFromTimelinePosition,
+  timelineHours,
+  timelinePosition,
+  type HHMM,
+  type Meal,
+} from "@diet/core";
 
 /** 라벨 하나가 차지하는 가로 폭 (타임라인 대비). 이보다 가까운 식사는 아랫줄로 내린다 */
 const LABEL_WIDTH = 0.11;
@@ -12,10 +20,12 @@ interface Props {
   /** 그날 밤 잠든 시각 (다음 날 기록의 잠든 시각) */
   bedTime?: HHMM;
   onMealClick?: (meal: Meal) => void;
+  /** 빈 곳을 누르면 그 시각으로 새 식사를 기록한다 */
+  onTimeClick?: (time: HHMM) => void;
 }
 
 /** 종이 기록지 한 줄: 정각 칸 + 수면 형광펜 + 먹은 시각에 화살표와 메모 */
-export function Timeline({ meals, wakeTime, bedTime, onMealClick }: Props) {
+export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick }: Props) {
   const hours = timelineHours();
   const placed = placeLabels(meals);
   // 누를 수 없는 타임라인(주간 보기)에서는 버튼 대신 div로 그려 클릭이 바깥으로 전달되게 한다
@@ -46,13 +56,34 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick }: Props) {
       </div>
 
       <div
-        className="relative rounded-b border border-t-0 border-line bg-card"
+        className={`relative rounded-b border border-t-0 border-line bg-card ${onTimeClick ? "cursor-copy" : ""}`}
         style={{ height: `${lanes * 5.25 + 0.75}rem` }}
+        onClick={
+          onTimeClick &&
+          ((e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            onTimeClick(timeFromTimelinePosition((e.clientX - rect.left) / rect.width));
+          })
+        }
+        data-testid="timeline-body"
       >
+        {onTimeClick && meals.length === 0 && (
+          <p className="pointer-events-none absolute inset-0 grid place-items-center text-xs text-ink-soft">
+            먹은 시각쯤을 눌러서 바로 기록하세요
+          </p>
+        )}
         {placed.map(({ meal, position, lane }) => (
           <MarkerTag
             key={meal.id}
-            {...(onMealClick ? { type: "button" as const, onClick: () => onMealClick(meal) } : {})}
+            {...(onMealClick
+              ? {
+                  type: "button" as const,
+                  onClick: (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    onMealClick(meal);
+                  },
+                }
+              : {})}
             className="absolute flex w-28 -translate-x-1/2 flex-col items-center text-center leading-tight"
             style={{ left: pct(position), top: `${lane * 5.25}rem` }}
           >

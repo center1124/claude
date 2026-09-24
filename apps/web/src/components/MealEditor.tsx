@@ -3,8 +3,11 @@
 import { useRef, useState } from "react";
 import {
   COMPANION_LABELS,
+  MEAL_TIME_PRESETS,
   mealTimeFromPhoto,
   nowHHMM,
+  similarTimeMeal,
+  type DailyLog,
   toHHMM,
   type Companion,
   type HHMM,
@@ -21,13 +24,22 @@ export interface MealEditorProps {
   isToday: boolean;
   /** 고치는 식사. 없으면 새 식사 */
   meal?: Meal;
-  /** 새 식사를 사진부터 시작했을 때: 이미 저장된 사진과 촬영 시각 */
-  seed?: { photoIds: string[]; time?: HHMM };
+  /** 새 식사의 시작 값: 사진부터 시작했으면 저장된 사진, 타임라인을 눌렀으면 그 시각 */
+  seed?: MealSeed;
+  /** 오늘 이전 기록 (예시를 찾을 때) */
+  pastLogs: DailyLog[];
   frequentFoods: string[];
   recentMeals: Meal[];
   onSave: (meal: Meal) => void;
   onDelete?: () => void;
   onClose: () => void;
+}
+
+export interface MealSeed {
+  photoIds?: string[];
+  time?: HHMM;
+  /** photo: 사진 촬영 시각, missing: 사진에 시각이 없음, tap: 타임라인을 누른 시각 */
+  timeSource?: "photo" | "missing" | "tap";
 }
 
 const COMPANIONS = Object.entries(COMPANION_LABELS) as [Companion, string][];
@@ -37,6 +49,7 @@ export function MealEditor({
   isToday,
   meal,
   seed,
+  pastLogs,
   frequentFoods,
   recentMeals,
   onSave,
@@ -44,15 +57,19 @@ export function MealEditor({
   onClose,
 }: MealEditorProps) {
   const repo = useRepository();
-  const [draft, setDraft] = useState<Meal>(
-    () =>
-      meal ?? {
-        id: crypto.randomUUID(),
-        time: seed?.time ?? (isToday ? nowHHMM() : ""),
-        description: "",
-        photoIds: seed?.photoIds ?? [],
-      },
-  );
+  const [draft, setDraft] = useState<Meal>(() => {
+    if (meal) return meal;
+    const time = seed?.time ?? (isToday && seed?.timeSource !== "missing" ? nowHHMM() : "");
+    return {
+      id: crypto.randomUUID(),
+      time,
+      description: (time && similarTimeMeal(pastLogs, time)?.description) || "",
+      photoIds: seed?.photoIds ?? [],
+    };
+  });
+  const [timeSource, setTimeSource] = useState(meal ? undefined : seed?.timeSource);
+  // 새 식사는 지난번 비슷한 시각에 먹은 것을 예시로 채워 둔다. 고객이 설명을 직접 고치면 더 바꾸지 않는다.
+  const [exampleActive, setExampleActive] = useState(!meal && draft.description !== "");
   // 이번 편집에서 새로 올린 사진 / 지운 기존 사진. 취소하면 되돌리고, 저장하면 확정한다.
   const [addedPhotos, setAddedPhotos] = useState<string[]>(seed?.photoIds ?? []);
   const [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
@@ -62,20 +79,36 @@ export function MealEditor({
   const canSave = draft.time && (draft.description.trim() || draft.photoIds.length > 0);
   const set = (patch: Partial<Meal>) => setDraft((d) => ({ ...d, ...patch }));
 
+  function setTime(time: HHMM, source?: MealSeed["timeSource"]) {
+    setTimeSource(source);
+    if (!meal && (exampleActive || !draft.description)) {
+      const example = time ? similarTimeMeal(pastLogs, time) : null;
+      set({ time, description: example?.description ?? "" });
+      setExampleActive(!!example);
+    } else {
+      set({ time });
+    }
+  }
+
+  function setDescription(description: string) {
+    setExampleActive(false);
+    set({ description });
+  }
+
   async function addPhotos(files: FileList | null) {
     if (!files?.length) return;
     setUploading(true);
     try {
       const imported = await Promise.all(Array.from(files).map((f) => importPhoto(repo, f)));
       const ids = imported.map((p) => p.id);
-      const photoTime = imported.map((p) => mealTimeFromPhoto(p.takenAt, date)).find(Boolean);
+      const photoTime = imported
+        .map((p) => (p.takenAt ? mealTimeFromPhoto(p.takenAt, date) : null))
+        .find(Boolean);
+      const firstPhotos = draft.photoIds.length === 0;
       setAddedPhotos((prev) => [...prev, ...ids]);
-      setDraft((d) => ({
-        ...d,
-        photoIds: [...d.photoIds, ...ids],
-        // 첫 사진이면 촬영 시각을 먹은 시각으로
-        time: d.photoIds.length === 0 && photoTime ? photoTime : d.time,
-      }));
+      setDraft((d) => ({ ...d, photoIds: [...d.photoIds, ...ids] }));
+      // 첫 사진이면 촬영 시각을 먹은 시각으로
+      if (firstPhotos && photoTime) setTime(photoTime, "photo");
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -93,8 +126,8 @@ export function MealEditor({
   }
 
   function addFood(food: string) {
-    const current = draft.description.trimEnd();
-    set({ description: current ? `${current}\n${food}` : food });
+    const current = exampleActive ? "" : draft.description.trimEnd();
+    setDescription(current ? `${current}\n${food}` : food);
   }
 
   function cancel() {
@@ -178,21 +211,31 @@ export function MealEditor({
             <input
               id="meal-time"
               type="time"
-              className={inputClass}
+              className={`${inputClass} ${timeSource === "missing" && !draft.time ? "border-pen" : ""}`}
               value={draft.time}
-              onChange={(e) => set({ time: e.target.value })}
+              onChange={(e) => setTime(e.target.value)}
             />
-            <div className="flex gap-1.5">
+            {timeSource === "photo" && <p className="text-xs text-ink-soft">📷 사진을 찍은 시각이에요.</p>}
+            {timeSource === "missing" && !draft.time && (
+              <p className="text-xs text-pen">사진에 찍은 시각 정보가 없어요. 아래 버튼이나 시계로 골라주세요.</p>
+            )}
+            <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1">
               {isToday &&
                 [
                   ["방금", 0],
                   ["30분 전", 30],
                   ["1시간 전", 60],
                 ].map(([label, m]) => (
-                  <Chip key={label} onClick={() => set({ time: minutesAgo(m as number) })}>
+                  <Chip key={label} onClick={() => setTime(minutesAgo(m as number))}>
                     {label}
                   </Chip>
                 ))}
+              {isToday && <span className="mx-0.5 w-px shrink-0 bg-line" aria-hidden />}
+              {MEAL_TIME_PRESETS.map((preset) => (
+                <Chip key={preset.label} active={draft.time === preset.time} onClick={() => setTime(preset.time)}>
+                  {preset.label} {preset.time}
+                </Chip>
+              ))}
             </div>
           </div>
 
@@ -208,7 +251,10 @@ export function MealEditor({
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => set({ description: m.description, companion: m.companion, myPortion: m.myPortion })}
+                      onClick={() => {
+                        setDescription(m.description);
+                        set({ companion: m.companion, myPortion: m.myPortion });
+                      }}
                       className="max-w-40 shrink-0 truncate rounded-lg border border-line bg-paper px-3 py-2 text-left text-xs text-pen"
                     >
                       {m.description.replace(/\n/g, ", ")}
@@ -217,13 +263,25 @@ export function MealEditor({
                 </div>
               </div>
             )}
+            {exampleActive && (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-highlight/40 px-3 py-2 text-xs">
+                <span>지난번 이 시간쯤 먹은 걸 넣어뒀어요. 다르면 고쳐주세요.</span>
+                <button
+                  type="button"
+                  onClick={() => setDescription("")}
+                  className="shrink-0 rounded-full border border-ink/20 bg-card px-2.5 py-1 font-bold"
+                >
+                  지우기
+                </button>
+              </div>
+            )}
             <textarea
               id="meal-description"
               rows={3}
-              className={inputClass}
+              className={`${inputClass} ${exampleActive ? "text-pen/70" : ""}`}
               placeholder={"예) 밥 200g\n채소 100g\n제육볶음 100g"}
               value={draft.description}
-              onChange={(e) => set({ description: e.target.value })}
+              onChange={(e) => setDescription(e.target.value)}
             />
             {frequentFoods.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
