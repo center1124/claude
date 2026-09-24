@@ -16,7 +16,7 @@ import {
   recentMeals,
   submissionState,
   type DailyLog,
-  type ParsedMeal,
+  type SpokenLog,
   type ISODate,
   type Meal,
   type MealSlot,
@@ -25,7 +25,7 @@ import { importPhoto, photoErrorMessage } from "@/lib/image";
 import { useDailyLog, useLogs, useProfile, useRepository } from "@/lib/repository";
 import { useToday } from "@/lib/use-today";
 import { Logo } from "./Logo";
-import { BulkEntry } from "./BulkEntry";
+import { SpeakEntry } from "./SpeakEntry";
 import { ExerciseCard } from "./ExerciseCard";
 import { MealEditor, type MealSeed } from "./MealEditor";
 import { MorningCheckCard } from "./MorningCheckCard";
@@ -46,7 +46,7 @@ export function DayView({ date }: { date: ISODate }) {
   const { profile, update: updateProfile } = useProfile();
   const [editing, setEditing] = useState<Editing>(null);
   const [importing, setImporting] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
+  const [speakOpen, setSpeakOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
 
@@ -115,11 +115,27 @@ export function DayView({ date }: { date: ISODate }) {
     }
   }
 
-  function saveBulk(parsed: ParsedMeal[]) {
+  /** 말로 기록: 말한 칸만 채운다. 식사는 더하고, 같은 이름의 운동은 말한 양으로 바꾼다 */
+  function saveSpoken(parsed: SpokenLog) {
     if (!log) return;
-    const created = parsed.map((m) => ({ id: crypto.randomUUID(), photoIds: [], ...m }));
-    update({ ...log, meals: [...log.meals, ...created] });
-    setNotice(`식사 ${created.length}개를 기록했어요. 사진은 각 식사를 눌러 추가할 수 있어요.`);
+    const meals = parsed.meals.map((m) => ({ id: crypto.randomUUID(), photoIds: [], ...m }));
+    const spokenNames = new Set(parsed.exercises.map((e) => e.name));
+    const exercises = [
+      ...(log.exercise?.items ?? []).filter((e) => !spokenNames.has(e.name)),
+      ...parsed.exercises.map((e) => ({ id: crypto.randomUUID(), ...e })),
+    ];
+    update({
+      ...log,
+      morning: { ...log.morning, ...parsed.morning },
+      meals: [...log.meals, ...meals],
+      exercise: parsed.exercises.length ? { items: exercises } : log.exercise,
+    });
+    const parts = [
+      Object.keys(parsed.morning).length && "아침 체크",
+      meals.length && `식사 ${meals.length}개`,
+      parsed.exercises.length && `운동 ${parsed.exercises.length}개`,
+    ].filter(Boolean);
+    setNotice(`${parts.join(", ")}를 기록했어요. 사진은 각 식사를 눌러 추가할 수 있어요.`);
   }
 
   const showYesterdayReminder =
@@ -145,6 +161,14 @@ export function DayView({ date }: { date: ISODate }) {
         </Link>
       )}
 
+      <button
+        type="button"
+        onClick={() => setSpeakOpen(true)}
+        className="flex items-center justify-center gap-2 rounded-2xl border border-pen bg-card py-3.5 font-bold text-pen"
+      >
+        🎤 말로 한 번에 기록
+      </button>
+
       <MorningCheckCard
         date={date}
         morning={log.morning}
@@ -156,7 +180,7 @@ export function DayView({ date }: { date: ISODate }) {
       />
 
       <Card title="식사 기록">
-        <div className="mb-3 grid grid-cols-3 gap-1.5">
+        <div className="mb-3 grid grid-cols-2 gap-1.5">
           <button
             type="button"
             onClick={() => photoInput.current?.click()}
@@ -171,13 +195,6 @@ export function DayView({ date }: { date: ISODate }) {
             className="rounded-xl border border-pen py-2.5 text-sm font-bold text-pen"
           >
             ✎ 글로
-          </button>
-          <button
-            type="button"
-            onClick={() => setBulkOpen(true)}
-            className="rounded-xl border border-pen py-2.5 text-sm font-bold text-pen"
-          >
-            ☰ 한 번에
           </button>
           <input
             ref={photoInput}
@@ -261,7 +278,16 @@ export function DayView({ date }: { date: ISODate }) {
         onSubmit={() => update({ ...log, submittedAt: new Date().toISOString() }, { stamp: false })}
       />
 
-      {bulkOpen && <BulkEntry onSave={saveBulk} onClose={() => setBulkOpen(false)} />}
+      {speakOpen && (
+        <SpeakEntry
+          knownExercises={[
+            ...(profile.routine ?? []),
+            ...pastLogs.flatMap((l) => l.exercise?.items ?? []),
+          ]}
+          onSave={saveSpoken}
+          onClose={() => setSpeakOpen(false)}
+        />
+      )}
 
       {editing && (
         <MealEditor

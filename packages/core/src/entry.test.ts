@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   emptyLog,
   groupPhotosIntoMeals,
-  parseDayText,
   previousSleep,
   similarTimeMeal,
   shiftTime,
@@ -38,44 +37,6 @@ describe("사진 여러 장을 식사별로 나누기", () => {
     ]);
     expect(groups.map((g) => g.items.map((i) => i.id))).toEqual([["a", "c"], ["d"], ["x"]]);
     expect(groups[2].takenAt).toBeNull();
-  });
-});
-
-describe("한 번에 쓰기", () => {
-  it("종이 기록지처럼 쓴 하루를 식사로 나눈다", () => {
-    const text = `9:00 과채스무디
-12:30 돌솥비빔밥
-+ 밥 추가 포만 8
-3:00 쿠키 1개
-6:40 밥 200g
-채소 100g
-제육볶음 100g
-포만감 9
-12:30 야식 라면`;
-    expect(parseDayText(text)).toEqual([
-      { time: "09:00", description: "과채스무디" },
-      { time: "12:30", description: "돌솥비빔밥\n+ 밥 추가", fullness: 8 },
-      { time: "15:00", description: "쿠키 1개" },
-      { time: "18:40", description: "밥 200g\n채소 100g\n제육볶음 100g", fullness: 9 },
-      { time: "00:30", description: "야식 라면" },
-    ]);
-  });
-
-  it("한국어 시각 표현", () => {
-    expect(parseDayText("아침 8시 반 토스트\n오후 3시 커피\n7시 20분 저녁").map((m) => m.time)).toEqual([
-      "08:30",
-      "15:00",
-      "19:20",
-    ]);
-  });
-
-  it("첫 줄의 1~5시는 오후, 24시간 표기는 그대로", () => {
-    expect(parseDayText("2:00 떡볶이").map((m) => m.time)).toEqual(["14:00"]);
-    expect(parseDayText("13:10 김밥\n21:00 과일").map((m) => m.time)).toEqual(["13:10", "21:00"]);
-  });
-
-  it("시각으로 시작하지 않는 첫 줄은 무시", () => {
-    expect(parseDayText("오늘 기록\n9:00 스무디")).toEqual([{ time: "09:00", description: "스무디" }]);
   });
 });
 
