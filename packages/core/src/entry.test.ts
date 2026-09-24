@@ -4,6 +4,7 @@ import {
   groupPhotosIntoMeals,
   parseDayText,
   similarTimeMeal,
+  sleepTapTarget,
   timeFromTimelinePosition,
   type DailyLog,
   type Meal,
@@ -84,5 +85,14 @@ describe("한 번에 쓰기", () => {
 
   it("시각으로 시작하지 않는 첫 줄은 무시", () => {
     expect(parseDayText("오늘 기록\n9:00 스무디")).toEqual([{ time: "09:00", description: "스무디" }]);
+  });
+});
+
+describe("수면 줄 누르기", () => {
+  it("오후 2시 전은 일어난 시각, 이후(새벽 포함)는 잠든 시각", () => {
+    expect(sleepTapTarget("07:30")).toBe("wake");
+    expect(sleepTapTarget("13:50")).toBe("wake");
+    expect(sleepTapTarget("23:40")).toBe("bed");
+    expect(sleepTapTarget("00:30")).toBe("bed");
   });
 });

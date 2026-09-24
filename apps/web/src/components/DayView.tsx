@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   addDays,
-  bedtimeLogDate,
   compareTimelineTime,
   COMPANION_LABELS,
   formatDateKo,
@@ -14,8 +13,8 @@ import {
   MEAL_SLOT_LABELS,
   mealTimeFromPhoto,
   missingMealSlots,
-  nowHHMM,
   recentMeals,
+  sleepTapTarget,
   submissionState,
   type DailyLog,
   type HHMM,
@@ -149,7 +148,6 @@ export function DayView({ date }: { date: ISODate }) {
 
       <MorningCheckCard
         date={date}
-        isToday={isToday}
         morning={log.morning}
         previous={previous}
         periodTracking={profile.periodTracking !== false}
@@ -201,8 +199,9 @@ export function DayView({ date }: { date: ISODate }) {
           </p>
         )}
 
-        <p className="mb-1 text-xs text-ink-soft">
-          👆 타임라인에서 먹은 시각을 누르면 그 시각으로 바로 기록돼요. 옆으로 밀면 저녁 시간이 보여요.
+        <p className="mb-1 text-xs leading-relaxed text-ink-soft">
+          👆 <b>윗줄</b>을 누르면 일어난·잠든 시각, <b>아래 칸</b>을 누르면 그 시각의 식사가 기록돼요. 옆으로 밀면
+          저녁 시간이 보여요.
         </p>
         <div className="-mx-4 overflow-x-auto px-4 pb-2">
           <div className="min-w-[720px]">
@@ -212,9 +211,20 @@ export function DayView({ date }: { date: ISODate }) {
               bedTime={nextLog.morning.sleepStart}
               onMealClick={(meal) => setEditing({ meal })}
               onTimeClick={(time) => setEditing({ seed: { time, timeSource: "tap" } })}
+              onSleepClick={(time) =>
+                sleepTapTarget(time) === "wake"
+                  ? update({ ...log, morning: { ...log.morning, sleepEnd: time } })
+                  : updateNext({ ...nextLog, morning: { ...nextLog.morning, sleepStart: time } })
+              }
             />
           </div>
         </div>
+        <SleepChips
+          wakeTime={log.morning.sleepEnd}
+          bedTime={nextLog.morning.sleepStart}
+          onClearWake={() => update({ ...log, morning: { ...log.morning, sleepEnd: undefined } })}
+          onClearBed={() => updateNext({ ...nextLog, morning: { ...nextLog.morning, sleepStart: undefined } })}
+        />
 
         {meals.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-soft">
@@ -262,19 +272,6 @@ export function DayView({ date }: { date: ISODate }) {
         )}
       </Card>
 
-      {isToday && (
-        <BedtimeCard
-          date={date}
-          log={log}
-          nextLog={nextLog}
-          onSet={(target, time) =>
-            target === "today"
-              ? update({ ...log, morning: { ...log.morning, sleepStart: time } })
-              : updateNext({ ...nextLog, morning: { ...nextLog.morning, sleepStart: time } })
-          }
-        />
-      )}
-
       <SubmitPanel
         log={log}
         onSkip={(slot) => update({ ...log, skippedMeals: [...(log.skippedMeals ?? []), slot] })}
@@ -301,42 +298,37 @@ export function DayView({ date }: { date: ISODate }) {
   );
 }
 
-/**
- * 잠들기 전에 누르는 버튼. 잠든 시각은 "다음 날 아침 기록"에 속하므로,
- * 밤에 누르면 내일 기록에, 자정 넘어 누르면 오늘 기록에 들어간다.
- */
-function BedtimeCard({
-  date,
-  log,
-  nextLog,
-  onSet,
+/** 타임라인에 기록된 수면 시각. ✕로 지운다 */
+function SleepChips({
+  wakeTime,
+  bedTime,
+  onClearWake,
+  onClearBed,
 }: {
-  date: ISODate;
-  log: DailyLog;
-  nextLog: DailyLog;
-  onSet: (target: "today" | "next", time: HHMM) => void;
+  wakeTime?: HHMM;
+  bedTime?: HHMM;
+  onClearWake: () => void;
+  onClearBed: () => void;
 }) {
-  const target = bedtimeLogDate() === date ? "today" : "next";
-  const recorded = (target === "today" ? log : nextLog).morning.sleepStart;
-
+  if (!wakeTime && !bedTime) return null;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3">
-      <p className="text-sm">
-        {recorded ? (
-          <>
-            🌙 <b>{recorded}</b>에 잠들었어요
-          </>
-        ) : (
-          <span className="text-ink-soft">잠들기 전에 눌러주세요</span>
-        )}
-      </p>
-      <button
-        type="button"
-        onClick={() => onSet(target, nowHHMM())}
-        className="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-bold text-white"
-      >
-        {recorded ? "다시 누르기" : "🌙 잘게요"}
-      </button>
+    <div className="mb-1 flex flex-wrap gap-1.5 text-xs">
+      {wakeTime && (
+        <span className="flex items-center gap-1 rounded-full bg-highlight/50 py-1 pl-3 pr-1">
+          ☀️ 일어남 <b>{wakeTime}</b>
+          <button type="button" aria-label="일어난 시각 지우기" onClick={onClearWake} className="px-1.5">
+            ✕
+          </button>
+        </span>
+      )}
+      {bedTime && (
+        <span className="flex items-center gap-1 rounded-full bg-highlight/50 py-1 pl-3 pr-1">
+          🌙 잠듦 <b>{bedTime}</b>
+          <button type="button" aria-label="잠든 시각 지우기" onClick={onClearBed} className="px-1.5">
+            ✕
+          </button>
+        </span>
+      )}
     </div>
   );
 }

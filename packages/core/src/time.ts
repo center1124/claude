@@ -97,3 +97,10 @@ export const MEAL_TIME_PRESETS: { label: string; time: HHMM }[] = [
   { label: "저녁", time: "19:00" },
   { label: "야식", time: "22:30" },
 ];
+
+/** 수면 줄을 눌렀을 때 이 시각 이전이면 일어난 시각, 이후면 잠든 시각으로 본다 */
+export const SLEEP_TAP_SPLIT = 14 * 60;
+
+export function sleepTapTarget(time: HHMM): "wake" | "bed" {
+  return timelineMinutes(time) < SLEEP_TAP_SPLIT ? "wake" : "bed";
+}

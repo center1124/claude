@@ -22,10 +22,12 @@ interface Props {
   onMealClick?: (meal: Meal) => void;
   /** 빈 곳을 누르면 그 시각으로 새 식사를 기록한다 */
   onTimeClick?: (time: HHMM) => void;
+  /** 수면 줄(윗줄)을 누르면 그 시각을 일어난/잠든 시각으로 기록한다 */
+  onSleepClick?: (time: HHMM) => void;
 }
 
 /** 종이 기록지 한 줄: 정각 칸 + 수면 형광펜 + 먹은 시각에 화살표와 메모 */
-export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick }: Props) {
+export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick, onSleepClick }: Props) {
   const hours = timelineHours();
   const placed = placeLabels(meals);
   // 누를 수 없는 타임라인(주간 보기)에서는 버튼 대신 div로 그려 클릭이 바깥으로 전달되게 한다
@@ -35,14 +37,8 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick }:
   return (
     <div
       className={`relative select-none ${onTimeClick ? "cursor-copy" : ""}`}
-      // 시간 숫자, 수면 줄, 아래 칸 어디를 눌러도 그 시각으로 기록한다
-      onClick={
-        onTimeClick &&
-        ((e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          onTimeClick(timeFromTimelinePosition((e.clientX - rect.left) / rect.width));
-        })
-      }
+      // 시간 숫자와 아래 칸 어디를 눌러도 그 시각으로 식사를 기록한다 (수면 줄은 따로)
+      onClick={onTimeClick && ((e) => onTimeClick(timeAt(e)))}
       data-testid="timeline"
     >
       <div className="relative h-5 text-[11px] text-ink-soft">
@@ -53,7 +49,22 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick }:
         ))}
       </div>
 
-      <div className="relative h-7 overflow-hidden rounded-t border border-line bg-card">
+      <div
+        className={`relative h-7 overflow-hidden rounded-t border border-line bg-card ${onSleepClick ? "cursor-pointer" : ""}`}
+        onClick={
+          onSleepClick &&
+          ((e) => {
+            e.stopPropagation();
+            onSleepClick(timeAt(e));
+          })
+        }
+        data-testid="timeline-sleep"
+      >
+        {onSleepClick && !wakeTime && !bedTime && (
+          <p className="pointer-events-none absolute inset-0 grid place-items-center text-[11px] text-ink-soft">
+            😴 이 줄에서 일어난 시각과 잠든 시각을 누르세요
+          </p>
+        )}
         {sleepSegments(wakeTime, bedTime).map((s) => (
           <div
             key={s.from}
@@ -106,6 +117,13 @@ export function Timeline({ meals, wakeTime, bedTime, onMealClick, onTimeClick }:
       </div>
     </div>
   );
+}
+
+/** 누른 위치의 시각. 타임라인 전체 너비 기준으로 계산한다 */
+function timeAt(e: React.MouseEvent<HTMLElement>): HHMM {
+  const root = (e.currentTarget.closest("[data-testid=timeline]") ?? e.currentTarget) as HTMLElement;
+  const rect = root.getBoundingClientRect();
+  return timeFromTimelinePosition((e.clientX - rect.left) / rect.width);
 }
 
 function placeLabels(meals: Meal[]) {

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   formatDuration,
-  nowHHMM,
   periodDday,
   sleepMinutes,
   type ISODate,
@@ -13,7 +12,6 @@ import { Card, inputClass } from "./ui";
 
 interface Props {
   date: ISODate;
-  isToday: boolean;
   morning: MorningCheck;
   /** 가장 최근에 기록한 체중·허리 (빈칸을 채우는 출발점) */
   previous: { weightKg?: number; waistCm?: number };
@@ -24,7 +22,6 @@ interface Props {
 
 export function MorningCheckCard({
   date,
-  isToday,
   morning,
   previous,
   periodTracking,
@@ -47,34 +44,51 @@ export function MorningCheckCard({
             <span className="text-lg font-bold text-pen">{sleep ?? "–"}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
-              어젯밤 잠든 시각
+            <div className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
+              <span className="flex items-center justify-between">
+                <label htmlFor="sleepStart">어젯밤 잠든 시각</label>
+                {morning.sleepStart && (
+                  <button
+                    type="button"
+                    aria-label="어젯밤 잠든 시각 지우기"
+                    onClick={() => set("sleepStart", undefined)}
+                    className="underline"
+                  >
+                    지우기
+                  </button>
+                )}
+              </span>
               <input
+                id="sleepStart"
                 type="time"
                 className={inputClass}
                 value={morning.sleepStart ?? ""}
                 onChange={(e) => set("sleepStart", e.target.value || undefined)}
               />
-            </label>
-            <label className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
-              오늘 일어난 시각
+            </div>
+            <div className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
+              <span className="flex items-center justify-between">
+                <label htmlFor="sleepEnd">오늘 일어난 시각</label>
+                {morning.sleepEnd && (
+                  <button
+                    type="button"
+                    aria-label="오늘 일어난 시각 지우기"
+                    onClick={() => set("sleepEnd", undefined)}
+                    className="underline"
+                  >
+                    지우기
+                  </button>
+                )}
+              </span>
               <input
+                id="sleepEnd"
                 type="time"
                 className={inputClass}
                 value={morning.sleepEnd ?? ""}
                 onChange={(e) => set("sleepEnd", e.target.value || undefined)}
               />
-            </label>
+            </div>
           </div>
-          {isToday && !morning.sleepEnd && (
-            <button
-              type="button"
-              onClick={() => set("sleepEnd", nowHHMM())}
-              className="mt-2 w-full rounded-xl bg-highlight/60 py-2.5 text-sm font-bold"
-            >
-              ☀️ 지금 일어났어요
-            </button>
-          )}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
