@@ -44,7 +44,7 @@ export default function SettingsPage() {
         {profile.periodTracking === false ? (
           <p className="text-xs text-ink-soft">생리 기록을 사용하지 않아요. 기록 화면에서 생리 항목이 보이지 않아요.</p>
         ) : (
-          <label className="grid gap-1 text-sm">
+          <label className="grid grid-cols-1 gap-1 text-sm">
             <span className="text-xs font-medium">다음 예정일</span>
             <input
               type="date"

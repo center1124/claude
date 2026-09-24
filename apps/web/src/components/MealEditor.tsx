@@ -213,7 +213,7 @@ export function MealEditor({
             )}
           </div>
 
-          <div className="grid gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5">
             <label htmlFor="meal-time" className="text-sm font-medium">
               먹은 시각
             </label>
@@ -248,7 +248,7 @@ export function MealEditor({
             </div>
           </div>
 
-          <div className="grid gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5">
             <label htmlFor="meal-description" className="text-sm font-medium">
               먹은 것과 양
             </label>
@@ -327,7 +327,7 @@ export function MealEditor({
             </div>
           </fieldset>
 
-          <fieldset className="grid gap-1.5">
+          <fieldset className="grid grid-cols-1 gap-1.5">
             <legend className="mb-1.5 text-sm font-medium">
               누구와 <span className="text-xs font-normal text-ink-soft">(선택 안 하면 혼자)</span>
             </legend>

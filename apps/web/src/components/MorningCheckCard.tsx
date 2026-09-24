@@ -47,7 +47,7 @@ export function MorningCheckCard({
             <span className="text-lg font-bold text-pen">{sleep ?? "–"}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="grid gap-1 text-xs text-ink-soft">
+            <label className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
               어젯밤 잠든 시각
               <input
                 type="time"
@@ -56,7 +56,7 @@ export function MorningCheckCard({
                 onChange={(e) => set("sleepStart", e.target.value || undefined)}
               />
             </label>
-            <label className="grid gap-1 text-xs text-ink-soft">
+            <label className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
               오늘 일어난 시각
               <input
                 type="time"

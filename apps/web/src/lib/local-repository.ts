@@ -44,15 +44,15 @@ export class LocalDiaryRepository implements DiaryRepository {
 
   async savePhoto(file: Blob): Promise<string> {
     const id = crypto.randomUUID();
-    // 아이폰 Safari는 Blob을 IndexedDB에 넣다가 실패하는 경우가 있어 바이트 배열로 저장한다
-    const stored: StoredPhoto = { type: file.type || "image/jpeg", data: await file.arrayBuffer() };
-    await set(photoKey(id), stored, this.store);
+    // 아이폰 Safari는 Blob·ArrayBuffer를 IndexedDB에 넣다가 실패하는 경우가 있어 문자열(data URL)로 저장한다
+    await set(photoKey(id), await toDataUrl(file), this.store);
     return id;
   }
 
   async getPhotoUrl(photoId: string): Promise<string | null> {
-    const stored = await get<StoredPhoto | Blob>(photoKey(photoId), this.store);
+    const stored = await get<string | LegacyPhoto | Blob>(photoKey(photoId), this.store);
     if (!stored) return null;
+    if (typeof stored === "string") return stored;
     const blob = stored instanceof Blob ? stored : new Blob([stored.data], { type: stored.type });
     return URL.createObjectURL(blob);
   }
@@ -62,10 +62,19 @@ export class LocalDiaryRepository implements DiaryRepository {
   }
 }
 
-/** 사진 저장 형식. 예전 버전은 Blob을 그대로 저장했으므로 읽을 때 둘 다 받는다 */
-interface StoredPhoto {
+/** 예전 버전의 사진 저장 형식 (Blob을 그대로, 또는 바이트 배열로). 읽기만 지원한다 */
+interface LegacyPhoto {
   type: string;
   data: ArrayBuffer;
+}
+
+function toDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error("사진 파일을 읽지 못했습니다"));
+    reader.readAsDataURL(blob);
+  });
 }
 
 const logKey = (date: ISODate) => `log:${date}`;

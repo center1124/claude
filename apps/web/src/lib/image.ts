@@ -2,22 +2,46 @@ import { readExifDate, type DiaryRepository } from "@diet/core";
 
 const MAX_SIDE = 1280;
 
-/** 폰 사진은 용량이 크므로 긴 변 1280px JPEG로 줄여서 저장한다 */
+/**
+ * 폰 사진은 용량이 크므로 긴 변 1280px JPEG로 줄여서 저장한다.
+ * 아이폰 Safari에서도 잘 되도록 createImageBitmap 대신 <img>로 읽는다.
+ */
 export async function compressImage(file: File): Promise<Blob> {
-  let bitmap: ImageBitmap;
+  const url = URL.createObjectURL(file);
   try {
-    bitmap = await createImageBitmap(file);
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.8));
+    return blob ?? file;
   } catch {
-    return file; // 브라우저가 해석하지 못하는 형식(HEIC 등)은 원본 그대로
+    return file; // 브라우저가 해석하지 못하는 형식은 원본 그대로
+  } finally {
+    URL.revokeObjectURL(url);
   }
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.8));
-  return blob ?? file;
+}
+
+/** 어느 단계에서 실패했는지 알려주기 위한 오류 */
+class PhotoStepError extends Error {
+  constructor(
+    readonly step: string,
+    readonly cause: unknown,
+  ) {
+    super(step);
+  }
+}
+
+async function step<T>(name: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    throw new PhotoStepError(name, error);
+  }
 }
 
 /** 파일 수정 시각이 이보다 최근이면 방금 카메라로 찍은 사진으로 본다 */
@@ -39,12 +63,16 @@ export async function importPhoto(
     // EXIF가 깨진 사진은 시각을 모르는 사진으로 다룬다
   }
   if (!takenAt && Date.now() - file.lastModified < JUST_TAKEN_MS) takenAt = new Date();
-  const id = await repo.savePhoto(await compressImage(file));
+  const compressed = await step("줄이기", () => compressImage(file));
+  const id = await step("저장", () => repo.savePhoto(compressed));
   return { id, takenAt };
 }
 
 /** 사진 저장 실패 원인을 고객이 알 수 있게 (문제 신고 시 그대로 전달받기 위해 원문도 붙인다) */
 export function photoErrorMessage(error: unknown): string {
-  const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-  return `사진을 저장하지 못했어요. 카카오톡 안에서 열었다면 Safari나 Chrome으로 열어 주세요. (${detail})`;
+  const stepName = error instanceof PhotoStepError ? error.step : "처리";
+  const cause = error instanceof PhotoStepError ? error.cause : error;
+  const detail =
+    cause instanceof Error ? `${cause.name}: ${cause.message}` : cause == null ? "원인 정보 없음" : String(cause);
+  return `사진 ${stepName} 단계에서 실패했어요. (${detail}) 이 화면을 캡처해서 알려주세요.`;
 }
