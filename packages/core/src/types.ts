@@ -15,27 +15,15 @@ export interface MorningCheck {
   bowelCount?: number;
 }
 
-/** 누구와 먹었는지. 없으면 혼자 */
-export type Companion = "family" | "friends" | "work";
-
-export const COMPANION_LABELS: Record<Companion, string> = {
-  family: "가족",
-  friends: "친구",
-  work: "동료·회식",
-};
-
 export interface Meal {
   id: string;
   time: HHMM;
-  /** 무엇을 얼마나 먹었는지. 예: "밥 200g, 제육볶음 100g" */
+  /** 무엇을 먹었는지. 예: "돌솥비빔밥", "과채스무디" (양은 적고 싶을 때만) */
   description: string;
   /** 포만감 1~10 (고객이 입력) */
   fullness?: number;
   /** 사진 참조 (저장소가 해석하는 키 또는 URL) */
   photoIds: string[];
-  companion?: Companion;
-  /** 함께 나눠 먹었을 때 내가 먹은 양. 예: "2조각", "1/3" */
-  myPortion?: string;
 }
 
 export interface DailyLog {

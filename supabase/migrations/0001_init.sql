@@ -40,9 +40,6 @@ create table meals (
   time time not null,
   description text not null default '',
   fullness smallint check (fullness between 1 and 10),
-  companion text check (companion in ('family', 'friends', 'work')),
-  -- 나눠 먹었을 때 내가 먹은 양
-  my_portion text,
   -- storage 버킷 meal-photos 안의 경로들
   photo_paths text[] not null default '{}',
   created_at timestamptz not null default now()

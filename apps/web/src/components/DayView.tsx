@@ -5,7 +5,6 @@ import { useRef, useState } from "react";
 import {
   addDays,
   compareTimelineTime,
-  COMPANION_LABELS,
   formatDateKo,
   formatDuration,
   frequentFoods,
@@ -258,12 +257,6 @@ export function DayView({ date }: { date: ISODate }) {
                       <span className="whitespace-pre-line text-pen">{meal.description}</span>
                     ) : (
                       <span className="text-sm text-ink-soft underline">눌러서 먹은 것 적기</span>
-                    )}
-                    {meal.companion && (
-                      <span className="text-xs text-ink-soft">
-                        함께: {COMPANION_LABELS[meal.companion]}
-                        {meal.myPortion && ` · 내가 먹은 양 ${meal.myPortion}`}
-                      </span>
                     )}
                     {meal.photoIds.length > 0 && (
                       <span className="flex gap-1.5">

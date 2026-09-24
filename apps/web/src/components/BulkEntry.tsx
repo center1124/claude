@@ -8,7 +8,7 @@ const PLACEHOLDER = `9:00 과채스무디
 12:30 돌솥비빔밥
 + 밥 추가 포만 8
 3:00 쿠키 1개
-6:40 밥 200g, 제육볶음 100g 포만 9`;
+6:40 제육볶음, 샐러드 포만 9`;
 
 /** 종이 기록지처럼 하루 식사를 여러 줄로 한 번에 쓰기 */
 export function BulkEntry({ onSave, onClose }: { onSave: (meals: ParsedMeal[]) => void; onClose: () => void }) {

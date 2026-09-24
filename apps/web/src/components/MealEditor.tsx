@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import {
-  COMPANION_LABELS,
   MEAL_TIME_PRESETS,
   mealTimeFromPhoto,
   nowHHMM,
@@ -10,7 +9,6 @@ import {
   similarTimeMeal,
   type DailyLog,
   toHHMM,
-  type Companion,
   type HHMM,
   type ISODate,
   type Meal,
@@ -43,7 +41,6 @@ export interface MealSeed {
   timeSource?: "photo" | "missing" | "tap";
 }
 
-const COMPANIONS = Object.entries(COMPANION_LABELS) as [Companion, string][];
 
 export function MealEditor({
   date,
@@ -142,11 +139,7 @@ export function MealEditor({
 
   function save() {
     removedPhotos.forEach((id) => void repo.deletePhoto(id));
-    onSave({
-      ...draft,
-      description: draft.description.trim(),
-      myPortion: draft.companion ? draft.myPortion?.trim() || undefined : undefined,
-    });
+    onSave({ ...draft, description: draft.description.trim() });
     onClose();
   }
 
@@ -274,7 +267,7 @@ export function MealEditor({
 
           <div className="grid grid-cols-1 gap-1.5">
             <label htmlFor="meal-description" className="text-sm font-medium">
-              먹은 것과 양
+              먹은 것
             </label>
             {recentMeals.length > 0 && !meal && !draft.description && (
               <div className="grid gap-1">
@@ -284,10 +277,7 @@ export function MealEditor({
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => {
-                        setDescription(m.description);
-                        set({ companion: m.companion, myPortion: m.myPortion });
-                      }}
+                      onClick={() => setDescription(m.description)}
                       className="max-w-40 shrink-0 truncate rounded-lg border border-line bg-paper px-3 py-2 text-left text-xs text-pen"
                     >
                       {m.description.replace(/\n/g, ", ")}
@@ -312,7 +302,7 @@ export function MealEditor({
               id="meal-description"
               rows={3}
               className={`${inputClass} ${exampleActive ? "text-pen/70" : ""}`}
-              placeholder={"예) 밥 200g\n채소 100g\n제육볶음 100g"}
+              placeholder="예) 돌솥비빔밥, 과채스무디"
               value={draft.description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -349,32 +339,6 @@ export function MealEditor({
                 </button>
               ))}
             </div>
-          </fieldset>
-
-          <fieldset className="grid grid-cols-1 gap-1.5">
-            <legend className="mb-1.5 text-sm font-medium">
-              누구와 <span className="text-xs font-normal text-ink-soft">(선택 안 하면 혼자)</span>
-            </legend>
-            <div className="flex flex-wrap gap-1.5">
-              {COMPANIONS.map(([value, label]) => (
-                <Chip
-                  key={value}
-                  active={draft.companion === value}
-                  onClick={() => set({ companion: draft.companion === value ? undefined : value })}
-                >
-                  {label}
-                </Chip>
-              ))}
-            </div>
-            {draft.companion && (
-              <input
-                aria-label="내가 먹은 양"
-                className={inputClass}
-                placeholder="나눠 먹었다면 내가 먹은 양 (예: 2조각, 1/3)"
-                value={draft.myPortion ?? ""}
-                onChange={(e) => set({ myPortion: e.target.value })}
-              />
-            )}
           </fieldset>
         </div>
 
