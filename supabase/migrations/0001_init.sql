@@ -11,6 +11,8 @@ create table profiles (
   coach_id uuid references profiles (id),
   period_tracking boolean not null default true,
   period_expected_date date,
+  -- 내 운동 루틴: [{id, name, kind, method, amount}] (packages/core Exercise)
+  routine jsonb not null default '[]',
   -- 건강정보(민감정보) 수집 별도 동의 시각
   sensitive_data_consented_at timestamptz,
   created_at timestamptz not null default now()
@@ -28,6 +30,8 @@ create table daily_logs (
   bowel_count smallint check (bowel_count >= 0),
   -- "안 먹었어요"로 확인한 끼니
   skipped_meals text[] not null default '{}' check (skipped_meals <@ array['breakfast', 'lunch', 'dinner']),
+  -- 운동: {items: Exercise[], rest?: boolean} (packages/core DailyExercise)
+  exercise jsonb,
   -- 고객이 "지금 보내기"를 누른 시각. 없으면 다음 날 오전 9시(고객 현지)에 자동으로 보낸 것으로 본다
   submitted_at timestamptz,
   updated_at timestamptz not null default now(),
@@ -74,7 +78,7 @@ create policy "본인 프로필 수정" on profiles
   for update using (id = auth.uid());
 -- 역할(role)과 담당 코치(coach_id)는 본인이 바꿀 수 없다 (코치가 관리자 화면에서 지정)
 revoke update on profiles from authenticated;
-grant update (name, period_tracking, period_expected_date, sensitive_data_consented_at) on profiles to authenticated;
+grant update (name, period_tracking, period_expected_date, routine, sensitive_data_consented_at) on profiles to authenticated;
 
 -- 가입하면 고객 프로필을 자동으로 만든다
 create function handle_new_user() returns trigger

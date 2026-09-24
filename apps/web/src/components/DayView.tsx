@@ -26,6 +26,7 @@ import { useDailyLog, useLogs, useProfile, useRepository } from "@/lib/repositor
 import { useToday } from "@/lib/use-today";
 import { Logo } from "./Logo";
 import { BulkEntry } from "./BulkEntry";
+import { ExerciseCard } from "./ExerciseCard";
 import { MealEditor, type MealSeed } from "./MealEditor";
 import { MorningCheckCard } from "./MorningCheckCard";
 import { Photo } from "./Photo";
@@ -42,7 +43,7 @@ export function DayView({ date }: { date: ISODate }) {
   const { log: nextLog } = useDailyLog(addDays(date, 1));
   const { log: prevLog } = useDailyLog(addDays(date, -1));
   const pastLogs = useLogs(addDays(date, -30), addDays(date, -1));
-  const { profile } = useProfile();
+  const { profile, update: updateProfile } = useProfile();
   const [editing, setEditing] = useState<Editing>(null);
   const [importing, setImporting] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -245,6 +246,14 @@ export function DayView({ date }: { date: ISODate }) {
           </ul>
         )}
       </Card>
+
+      <ExerciseCard
+        exercise={log.exercise}
+        routine={profile.routine ?? []}
+        pastLogs={pastLogs}
+        onChange={(exercise) => update({ ...log, exercise })}
+        onAddToRoutine={(exercise) => updateProfile({ ...profile, routine: [...(profile.routine ?? []), exercise] })}
+      />
 
       <SubmitPanel
         log={log}

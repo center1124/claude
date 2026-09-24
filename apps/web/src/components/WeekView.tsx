@@ -6,6 +6,8 @@ import { useState } from "react";
 import {
   addDays,
   compareTimelineTime,
+  EXERCISE_SLOT_LABELS,
+  formatAmount,
   formatDuration,
   periodDday,
   sleepMinutes,
@@ -156,6 +158,11 @@ function PhoneDayRow({
           <span className="block text-xs">{weekdayKo(log.date)}</span>
           <span className="block text-xs">{shortDate(log.date)}</span>
           {sent && <span className="block text-xs text-pen">✓</span>}
+          {log.exercise?.items.length ? (
+            <span className="block text-xs" title="운동함">
+              🏃
+            </span>
+          ) : null}
         </span>
         <span className="grid gap-0.5">
           <Timeline variant="mini" meals={log.meals} wakeTime={log.morning.sleepEnd} bedTime={bedTime} />
@@ -201,6 +208,16 @@ function DayDetail({
   return (
     <div className="grid gap-2 px-2 pb-3 pt-2 text-sm">
       {facts.length > 0 && <p className="text-xs text-ink-soft">{facts.join(" · ")}</p>}
+      {(log.exercise?.items.length || log.exercise?.rest) && (
+        <p className="text-sm">
+          🏃{" "}
+          {log.exercise.rest
+            ? "쉬었어요"
+            : log.exercise.items
+                .map((e) => `${e.name} ${formatAmount(e)}${e.slot ? ` (${EXERCISE_SLOT_LABELS[e.slot]})` : ""}`)
+                .join(", ")}
+        </p>
+      )}
       {meals.length === 0 ? (
         <p className="text-xs text-ink-soft">식사 기록이 없어요.</p>
       ) : (
@@ -254,6 +271,7 @@ function PaperDayRow({
     ["체중", morning.weightKg?.toString()],
     ["허리 둘레", morning.waistCm?.toString()],
     ["화장실", morning.bowelCount?.toString()],
+    ["운동", exerciseSummary(log)],
   ];
   if (periodTracking) stats.push(["생리", periodDday(log.date, periodExpectedDate) ?? undefined]);
   const sent = submissionState(log).kind === "sent";
@@ -286,6 +304,14 @@ function PaperDayRow({
       </div>
     </div>
   );
+}
+
+/** PC 표의 운동 칸: "걷기 외 1", "쉼" */
+function exerciseSummary(log: DailyLog): string | undefined {
+  if (log.exercise?.rest) return "쉼";
+  const items = log.exercise?.items ?? [];
+  if (!items.length) return undefined;
+  return items.length === 1 ? items[0].name : `${items[0].name} 외 ${items.length - 1}`;
 }
 
 function WeekNavLink({ date, label, icon }: { date: ISODate; label: string; icon: string }) {

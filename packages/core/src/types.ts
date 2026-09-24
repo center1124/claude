@@ -1,3 +1,5 @@
+import type { DailyExercise, Exercise } from "./exercise";
+
 /** 날짜: "YYYY-MM-DD" (고객의 현지 날짜) */
 export type ISODate = string;
 /** 시각: "HH:MM" 24시간제 */
@@ -36,6 +38,7 @@ export interface DailyLog {
   updatedAt?: string;
   /** "안 먹었어요"로 확인한 끼니 */
   skippedMeals?: MealSlot[];
+  exercise?: DailyExercise;
 }
 
 export type MealSlot = "breakfast" | "lunch" | "dinner";
@@ -46,6 +49,8 @@ export interface ClientProfile {
   periodTracking?: boolean;
   /** 다음 생리 예정일 */
   periodExpectedDate?: ISODate;
+  /** 내 운동 루틴 (고객마다 다르게. 나중에 코치가 정해준다) */
+  routine?: Exercise[];
 }
 
 export function emptyLog(date: ISODate): DailyLog {

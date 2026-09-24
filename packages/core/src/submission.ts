@@ -11,7 +11,12 @@ export function autoSubmitAt(date: ISODate): Date {
 }
 
 export function hasContent(log: DailyLog): boolean {
-  return log.meals.length > 0 || Object.values(log.morning).some((v) => v !== undefined);
+  return (
+    log.meals.length > 0 ||
+    Object.values(log.morning).some((v) => v !== undefined) ||
+    !!log.exercise?.items.length ||
+    !!log.exercise?.rest
+  );
 }
 
 export type SubmissionState =

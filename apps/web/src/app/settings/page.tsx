@@ -1,6 +1,7 @@
 "use client";
 
 import { Logo } from "@/components/Logo";
+import { RoutineCard } from "@/components/RoutineCard";
 import { Card, inputClass, Loading } from "@/components/ui";
 import { useProfile } from "@/lib/repository";
 
@@ -26,6 +27,8 @@ export default function SettingsPage() {
           />
         </label>
       </Card>
+
+      <RoutineCard routine={profile.routine ?? []} onChange={(routine) => update({ ...profile, routine })} />
 
       <Card
         title="생리 기록"

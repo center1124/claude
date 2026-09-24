@@ -51,6 +51,20 @@ export function WeekSummaryCard({ current, previous }: { current: WeekSummary; p
       diff: (d) => signed(round1(d)),
     },
     {
+      label: "운동한 날",
+      current: current.loggedDays ? current.exerciseDays : null,
+      previous: previous.loggedDays ? previous.exerciseDays : null,
+      format: (v) => `${v}일`,
+      diff: (d) => signed(d, "일"),
+    },
+    {
+      label: "운동 시간",
+      current: current.exerciseMinutes,
+      previous: previous.exerciseMinutes,
+      format: (v) => formatGap(v),
+      diff: durationDiff,
+    },
+    {
       label: "체중",
       current: current.weight?.last ?? null,
       previous: previous.weight?.last ?? null,

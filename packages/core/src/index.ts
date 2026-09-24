@@ -7,3 +7,4 @@ export * from "./photo-time";
 export * from "./suggestions";
 export * from "./repository";
 export * from "./summary";
+export * from "./exercise";

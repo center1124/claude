@@ -1,3 +1,4 @@
+import { hasContent } from "./submission";
 import { sleepMinutes, timelineMinutes, toHHMM } from "./time";
 import type { DailyLog, HHMM } from "./types";
 
@@ -22,6 +23,10 @@ export interface WeekSummary {
   /** 주의 첫 기록과 마지막 기록 */
   weight: { first: number; last: number } | null;
   waist: { first: number; last: number } | null;
+  /** 운동한 날 수 */
+  exerciseDays: number;
+  /** 시간으로 잰 운동의 합 (분). 시간 운동이 없으면 null */
+  exerciseMinutes: number | null;
 }
 
 /**
@@ -38,6 +43,8 @@ export function summarizeWeek(logs: DailyLog[]): WeekSummary {
   const mealCounts: number[] = [];
   const fullness: number[] = [];
   let lateMeals = 0;
+  let exerciseDays = 0;
+  let exerciseMinutes: number | null = null;
 
   week.forEach((log, i) => {
     const { sleepStart, sleepEnd } = log.morning;
@@ -54,10 +61,16 @@ export function summarizeWeek(logs: DailyLog[]): WeekSummary {
     }
     lateMeals += times.filter((t) => t >= LATE_MEAL_FROM).length;
     log.meals.forEach((m) => m.fullness && fullness.push(m.fullness));
+
+    const exercises = log.exercise?.items ?? [];
+    if (exercises.length) exerciseDays++;
+    for (const e of exercises) {
+      if (e.method === "time" && e.amount.minutes) exerciseMinutes = (exerciseMinutes ?? 0) + e.amount.minutes;
+    }
   });
 
   return {
-    loggedDays: week.filter((l) => l.meals.length || Object.values(l.morning).some((v) => v !== undefined)).length,
+    loggedDays: week.filter(hasContent).length,
     avgSleep: average(sleeps),
     avgWake: average(wakes),
     avgBed: average(beds),
@@ -68,6 +81,8 @@ export function summarizeWeek(logs: DailyLog[]): WeekSummary {
     avgFullness: average(fullness, 1),
     weight: firstLast(week.map((l) => l.morning.weightKg)),
     waist: firstLast(week.map((l) => l.morning.waistCm)),
+    exerciseDays,
+    exerciseMinutes,
   };
 }
 
