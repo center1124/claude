@@ -13,6 +13,10 @@ export interface DiaryRepository {
   /** from ~ to (양 끝 포함), 날짜순. 기록이 없는 날은 빈 기록으로 채운다 */
   getLogs(from: ISODate, to: ISODate): Promise<DailyLog[]>;
   saveLog(log: DailyLog): Promise<void>;
+  /** 하루 기록과 그 날 사진을 지운다 */
+  deleteLog(date: ISODate): Promise<void>;
+  /** 모든 하루 기록과 사진을 지운다 (설정·루틴은 남긴다) */
+  deleteAllLogs(): Promise<void>;
 
   savePhoto(file: Blob): Promise<string>;
   /** 사진을 화면에 띄울 수 있는 URL */

@@ -1,4 +1,4 @@
-import { createStore, del, get, getMany, set, type UseStore } from "idb-keyval";
+import { createStore, del, delMany, get, getMany, keys, set, type UseStore } from "idb-keyval";
 import {
   addDays,
   daysBetween,
@@ -40,6 +40,20 @@ export class LocalDiaryRepository implements DiaryRepository {
 
   async saveLog(log: DailyLog): Promise<void> {
     await set(logKey(log.date), log, this.store);
+  }
+
+  async deleteLog(date: ISODate): Promise<void> {
+    const log = await get<DailyLog>(logKey(date), this.store);
+    const photoIds = log?.meals.flatMap((m) => m.photoIds) ?? [];
+    await delMany([logKey(date), ...photoIds.map(photoKey)], this.store);
+  }
+
+  async deleteAllLogs(): Promise<void> {
+    const all = await keys<string>(this.store);
+    await delMany(
+      all.filter((k) => k.startsWith("log:") || k.startsWith("photo:")),
+      this.store,
+    );
   }
 
   async savePhoto(file: Blob): Promise<string> {

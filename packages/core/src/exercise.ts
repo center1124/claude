@@ -31,6 +31,8 @@ export interface ExerciseAmount {
   minutes?: number;
   sets?: number;
   reps?: number;
+  /** 중량 (세트×횟수 운동, 선택) */
+  weightKg?: number;
   km?: number;
   steps?: number;
 }
@@ -66,7 +68,12 @@ export function formatAmount(exercise: Pick<Exercise, "method" | "amount">): str
     case "time":
       return minutes ? `${minutes}분` : "";
     case "sets":
-      return [sets && `${sets}세트`, reps && `${reps}회`].filter(Boolean).join(" × ");
+      return [
+        [sets && `${sets}세트`, reps && `${reps}회`].filter(Boolean).join(" × "),
+        exercise.amount.weightKg && `${exercise.amount.weightKg}kg`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
     case "distance":
       return km ? `${km}km` : "";
     case "steps":
@@ -74,20 +81,31 @@ export function formatAmount(exercise: Pick<Exercise, "method" | "amount">): str
   }
 }
 
-/** ±버튼 한 번에 바뀌는 양: 시간 10분, 세트 1세트, 거리 0.5km, 걸음 1,000보 */
-export function stepAmount(exercise: Pick<Exercise, "method" | "amount">, direction: 1 | -1): ExerciseAmount {
-  const a = exercise.amount;
-  const clamp = (value: number, min: number) => Math.max(min, Math.round(value * 10) / 10);
-  switch (exercise.method) {
-    case "time":
-      return { ...a, minutes: clamp((a.minutes ?? 0) + 10 * direction, 5) };
-    case "sets":
-      return { ...a, sets: clamp((a.sets ?? 0) + direction, 1) };
-    case "distance":
-      return { ...a, km: clamp((a.km ?? 0) + 0.5 * direction, 0.5) };
-    case "steps":
-      return { ...a, steps: clamp((a.steps ?? 0) + 1000 * direction, 1000) };
-  }
+/** 양의 각 항목과 ±버튼 한 번에 바뀌는 크기·최소값 */
+export type AmountField = keyof ExerciseAmount;
+
+export const AMOUNT_FIELDS: Record<AmountField, { label: string; unit: string; step: number; min: number }> = {
+  minutes: { label: "시간", unit: "분", step: 10, min: 5 },
+  sets: { label: "세트", unit: "세트", step: 1, min: 1 },
+  reps: { label: "횟수", unit: "회", step: 1, min: 1 },
+  weightKg: { label: "중량", unit: "kg", step: 1, min: 0 },
+  km: { label: "거리", unit: "km", step: 0.5, min: 0.5 },
+  steps: { label: "걸음", unit: "보", step: 1000, min: 1000 },
+};
+
+/** 방식마다 ±로 고칠 수 있는 항목 */
+export const METHOD_FIELDS: Record<ExerciseMethod, AmountField[]> = {
+  time: ["minutes"],
+  sets: ["sets", "reps", "weightKg"],
+  distance: ["km"],
+  steps: ["steps"],
+};
+
+/** 한 항목을 ±버튼 한 번만큼 바꾼다 (최소값 아래로 내려가지 않음, 0kg이면 중량을 뺀다) */
+export function stepField(amount: ExerciseAmount, field: AmountField, direction: 1 | -1): ExerciseAmount {
+  const { step, min } = AMOUNT_FIELDS[field];
+  const next = Math.max(min, Math.round(((amount[field] ?? 0) + step * direction) * 10) / 10);
+  return { ...amount, [field]: field === "weightKg" && next === 0 ? undefined : next };
 }
 
 /**

@@ -4,7 +4,7 @@ import {
   formatAmount,
   previousExercise,
   recentExtraExercises,
-  stepAmount,
+  stepField,
   summarizeWeek,
   type DailyLog,
   type Exercise,
@@ -30,12 +30,19 @@ describe("운동 양", () => {
     expect(formatAmount(ex("걸음", "steps", { steps: 8000 }))).toBe("8,000보");
   });
 
-  it("±버튼: 시간 10분, 세트 1세트, 거리 0.5km, 걸음 1,000보 (최소값 아래로 안 내려감)", () => {
-    expect(stepAmount(ex("걷기", "time", { minutes: 30 }), 1)).toEqual({ minutes: 40 });
-    expect(stepAmount(ex("걷기", "time", { minutes: 10 }), -1)).toEqual({ minutes: 5 });
-    expect(stepAmount(ex("스쿼트", "sets", { sets: 3, reps: 15 }), -1)).toEqual({ sets: 2, reps: 15 });
-    expect(stepAmount(ex("러닝", "distance", { km: 3 }), 1)).toEqual({ km: 3.5 });
-    expect(stepAmount(ex("걸음", "steps", { steps: 8000 }), 1)).toEqual({ steps: 9000 });
+  it("중량까지 표시", () => {
+    expect(formatAmount(ex("데드리프트", "sets", { sets: 3, reps: 10, weightKg: 20 }))).toBe("3세트 × 10회 · 20kg");
+  });
+
+  it("±버튼: 항목마다 한 단계 (최소값 아래로 안 내려감)", () => {
+    expect(stepField({ minutes: 30 }, "minutes", 1)).toEqual({ minutes: 40 });
+    expect(stepField({ minutes: 10 }, "minutes", -1)).toEqual({ minutes: 5 });
+    expect(stepField({ sets: 3, reps: 15 }, "sets", -1)).toEqual({ sets: 2, reps: 15 });
+    expect(stepField({ sets: 3, reps: 15 }, "reps", 1)).toEqual({ sets: 3, reps: 16 });
+    expect(stepField({ sets: 3, reps: 15 }, "weightKg", 1)).toEqual({ sets: 3, reps: 15, weightKg: 1 });
+    expect(stepField({ sets: 3, weightKg: 1 }, "weightKg", -1)).toEqual({ sets: 3, weightKg: undefined });
+    expect(stepField({ km: 3 }, "km", 1)).toEqual({ km: 3.5 });
+    expect(stepField({ steps: 8000 }, "steps", 1)).toEqual({ steps: 9000 });
   });
 });
 

@@ -7,7 +7,10 @@ import {
   formatAmount,
   previousExercise,
   recentExtraExercises,
-  stepAmount,
+  stepField,
+  AMOUNT_FIELDS,
+  METHOD_FIELDS,
+  type AmountField,
   type DailyExercise,
   type DailyLog,
   type Exercise,
@@ -206,6 +209,40 @@ export function ExerciseCard({ exercise, routine, pastLogs, onChange, onAddToRou
   );
 }
 
+/** 양의 한 항목: 세트 [−] 3 [+] */
+function FieldStepper({
+  name,
+  field,
+  value,
+  showLabel,
+  onStep,
+}: {
+  name: string;
+  field: AmountField;
+  value?: number;
+  showLabel: boolean;
+  onStep: (direction: 1 | -1) => void;
+}) {
+  const { label, unit } = AMOUNT_FIELDS[field];
+  const button = "grid h-8 w-8 place-items-center rounded-full border border-line bg-card text-base";
+  const shown = value === undefined ? "–" : field === "steps" ? value.toLocaleString("ko-KR") : value;
+  return (
+    <span className="flex items-center gap-1">
+      {showLabel && <span className="text-xs text-ink-soft">{label}</span>}
+      <button type="button" aria-label={`${name} ${label} 줄이기`} onClick={() => onStep(-1)} className={button}>
+        −
+      </button>
+      <span className="min-w-10 whitespace-nowrap text-center font-bold text-pen">
+        {shown}
+        <span className="text-xs font-normal">{unit === "세트" || unit === "회" ? "" : unit}</span>
+      </span>
+      <button type="button" aria-label={`${name} ${label} 늘리기`} onClick={() => onStep(1)} className={button}>
+        +
+      </button>
+    </span>
+  );
+}
+
 /** 한 운동: 이름·양(±), 한 때(아침·점심·저녁, 선택), 지우기 */
 function ExerciseRow({
   exercise,
@@ -218,7 +255,6 @@ function ExerciseRow({
   onRemove: () => void;
   onEdit: () => void;
 }) {
-  const small = "grid h-8 w-8 place-items-center rounded-full border border-line bg-card text-base";
   return (
     <li className="grid gap-2 rounded-xl border border-line px-3 py-2.5">
       <div className="flex items-center gap-2">
@@ -239,24 +275,17 @@ function ExerciseRow({
         </button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5">
-          <button
-            type="button"
-            aria-label={`${exercise.name} 줄이기`}
-            onClick={() => onChange({ ...exercise, amount: stepAmount(exercise, -1) })}
-            className={small}
-          >
-            −
-          </button>
-          <span className="min-w-16 whitespace-nowrap text-center font-bold text-pen">{formatAmount(exercise)}</span>
-          <button
-            type="button"
-            aria-label={`${exercise.name} 늘리기`}
-            onClick={() => onChange({ ...exercise, amount: stepAmount(exercise, 1) })}
-            className={small}
-          >
-            +
-          </button>
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {METHOD_FIELDS[exercise.method].map((field) => (
+            <FieldStepper
+              key={field}
+              name={exercise.name}
+              field={field}
+              value={exercise.amount[field]}
+              showLabel={METHOD_FIELDS[exercise.method].length > 1}
+              onStep={(direction) => onChange({ ...exercise, amount: stepField(exercise.amount, field, direction) })}
+            />
+          ))}
         </span>
         <span className="ml-auto flex gap-1">
           {SLOTS.map(([slot, label]) => (

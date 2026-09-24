@@ -91,9 +91,15 @@ export function ExerciseEditor({ exercise, title, offerRoutine, onSave, onDelete
               <NumberInput label="분" value={draft.amount.minutes} onChange={(minutes) => setAmount({ minutes })} />
             )}
             {draft.method === "sets" && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <NumberInput label="세트" value={draft.amount.sets} onChange={(sets) => setAmount({ sets })} />
                 <NumberInput label="회" value={draft.amount.reps} onChange={(reps) => setAmount({ reps })} />
+                <NumberInput
+                  label="kg"
+                  step="0.5"
+                  value={draft.amount.weightKg}
+                  onChange={(weightKg) => setAmount({ weightKg })}
+                />
               </div>
             )}
             {draft.method === "distance" && (

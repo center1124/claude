@@ -1,5 +1,6 @@
 "use client";
 
+import { DeleteRecordsCard } from "@/components/DeleteRecordsCard";
 import { Logo } from "@/components/Logo";
 import { RoutineCard } from "@/components/RoutineCard";
 import { Card, inputClass, Loading } from "@/components/ui";
@@ -62,6 +63,8 @@ export default function SettingsPage() {
           </label>
         )}
       </Card>
+
+      <DeleteRecordsCard />
 
       <p className="rounded-2xl bg-card p-4 text-xs leading-relaxed text-ink-soft">
         지금은 체험판이라 기록이 이 기기의 브라우저에만 저장돼요. 로그인과 서버 저장이 연결되면 코치와 기록이
