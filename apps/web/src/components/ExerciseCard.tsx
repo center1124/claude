@@ -89,7 +89,7 @@ export function ExerciseCard({ exercise, routine, pastLogs, onChange, onAddToRou
         )}
 
         {routine.length > 0 && (
-          <ul className="grid gap-1.5" aria-label="내 운동 루틴">
+          <ul className="grid gap-1.5" aria-label="코치와 정한 운동">
             {routine.map((r) => {
               const done = items.find((i) => i.name === r.name);
               return done ? (

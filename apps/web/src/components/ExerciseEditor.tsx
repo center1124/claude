@@ -118,7 +118,7 @@ export function ExerciseEditor({ exercise, title, offerRoutine, onSave, onDelete
                 checked={addToRoutine}
                 onChange={(e) => setAddToRoutine(e.target.checked)}
               />
-              내 운동 루틴에도 넣기 (매일 체크 목록에 나와요)
+              코치와 정한 운동에 넣기 (매일 체크 목록에 나와요)
             </label>
           )}
         </div>

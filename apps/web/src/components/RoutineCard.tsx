@@ -5,13 +5,13 @@ import { EXERCISE_KIND_LABELS, formatAmount, type Exercise } from "@diet/core";
 import { ExerciseEditor } from "./ExerciseEditor";
 import { Card } from "./ui";
 
-/** 설정: 내 운동 루틴. 하루 기록의 운동 체크 목록이 된다 */
+/** 설정: 코치와 정한 운동. 하루 기록의 운동 체크 목록이 된다 */
 export function RoutineCard({ routine, onChange }: { routine: Exercise[]; onChange: (routine: Exercise[]) => void }) {
   const [editing, setEditing] = useState<{ exercise?: Exercise } | null>(null);
 
   return (
     <Card
-      title="내 운동 루틴"
+      title="코치와 정한 운동"
       action={
         <button
           type="button"
@@ -24,7 +24,7 @@ export function RoutineCard({ routine, onChange }: { routine: Exercise[]; onChan
     >
       {routine.length === 0 ? (
         <p className="text-sm text-ink-soft">
-          코치님이 정해준 운동을 넣어 두세요. 하루 기록에서 체크만 하면 돼요.
+          코치와 정한 운동을 넣어 두세요. 하루 기록에서 체크만 하면 돼요.
         </p>
       ) : (
         <ul className="grid gap-1.5">
@@ -46,7 +46,7 @@ export function RoutineCard({ routine, onChange }: { routine: Exercise[]; onChan
       )}
       {editing && (
         <ExerciseEditor
-          title={editing.exercise ? "루틴 고치기" : "루틴에 운동 추가"}
+          title={editing.exercise ? "운동 고치기" : "코치와 정한 운동 추가"}
           exercise={editing.exercise}
           onSave={(e) =>
             onChange(editing.exercise ? routine.map((r) => (r.id === e.id ? e : r)) : [...routine, e])
