@@ -55,10 +55,18 @@ export function parseSpokenLog(text: string, knownExercises: Pick<Exercise, "nam
       lastWasMeal = false;
       continue;
     }
-    const meal = readMeal(clause, previousMeal);
-    if (meal) {
-      result.meals.push(meal);
-      previousMeal = timelineMinutes(meal.time);
+    // "점심 12시 미트볼 저녁 7시 30분 단백질 파우더"처럼 한 문장에 식사가 여럿이면 시각마다 나눈다
+    const mealClauses = splitAtTimes(clause);
+    const meals = mealClauses.map((c) => {
+      const meal = readMeal(c, previousMeal);
+      if (meal) previousMeal = timelineMinutes(meal.time);
+      return meal;
+    });
+    if (meals[0]) {
+      meals.forEach((meal, i) => {
+        if (meal) result.meals.push(meal);
+        else result.meals.at(-1)!.description += `\n${mealClauses[i]}`;
+      });
       lastWasMeal = true;
       continue;
     }
@@ -94,7 +102,7 @@ const NATIVE_NUMBERS: [string, number][] = [
 ];
 
 function normalizeNumbers(text: string): string {
-  let out = text;
+  let out = text.replace(/(\d)\s*(?:그람|그램)/g, "$1g").replace(/(\d)\s*킬로그램/g, "$1kg");
   for (const [word, n] of NATIVE_NUMBERS) {
     out = out.replace(new RegExp(`(^|\\s)${word}\\s*(시간|시|번|개|세트|회|바퀴)`, "g"), `$1${n}$2`);
   }
@@ -112,7 +120,7 @@ function splitClauses(text: string): string[] {
 
 // ── 시각 ──
 
-const TIME = /(오전|오후|아침|저녁|밤|새벽|낮)?\s*(\d{1,2})\s*(?:[:：]\s*(\d{2})|시(?!간)(?:\s*(\d{1,2})\s*분|\s*(반))?)/g;
+const TIME = /(오전|오후|아침|점심|저녁|밤|새벽|낮)?\s*(\d{1,2})\s*(?:[:：]\s*(\d{2})|시(?!간)(?:\s*(\d{1,2})\s*분|\s*(반))?)/g;
 
 interface FoundTime {
   period?: string;
@@ -134,7 +142,7 @@ function findTimes(clause: string): FoundTime[] {
     .filter((t) => t.hour <= 24 && t.minute <= 59);
 }
 
-const PM = new Set(["오후", "저녁", "밤", "낮"]);
+const PM = new Set(["오후", "점심", "저녁", "밤", "낮"]);
 const AM = new Set(["오전", "아침", "새벽"]);
 
 /** 잠든 시각: 저녁 6시 ~ 새벽 5시로 읽는다 ("12시 반" = 00:30, "11시" = 23:00) */
@@ -152,16 +160,23 @@ function wakeTime({ period, hour, minute }: FoundTime): HHMM {
   return toHHMM(h * 60 + minute);
 }
 
-/** 식사 시각: 오전/오후가 없으면 앞 식사 이후의 가장 가까운 시각 (첫 식사의 1~5시는 오후) */
+/**
+ * 식사 시각: 오전/오후가 없으면 앞 식사 이후의 가장 가까운 시각 (첫 식사의 1~5시는 오후).
+ * 12시는 낮 12시가 먼저이고, 앞 식사가 그보다 늦으면 밤 12시로 본다. "점심 11시"는 오전 11시.
+ */
 function mealTime({ period, hour, minute }: FoundTime, previous: number): HHMM {
-  if (period && AM.has(period)) return toHHMM((hour % 12) * 60 + minute);
-  if (period && PM.has(period)) return toHHMM(((hour % 12) + 12) * 60 + minute);
-  if (hour > 12 || hour === 0) return toHHMM((hour % 24) * 60 + minute);
-  const am = toHHMM((hour % 12) * 60 + minute);
-  const pm = toHHMM(((hour % 12) + 12) * 60 + minute);
-  if (previous === -Infinity) return hour >= 1 && hour <= 5 ? pm : am;
-  const later = [am, pm].filter((t) => timelineMinutes(t) >= previous).sort(compareTimelineTime);
-  return later[0] ?? pm;
+  const at = (h: number) => toHHMM(h * 60 + minute);
+  const noonSide = hour === 12 ? 12 : (hour % 12) + 12;
+  const morningSide = hour === 12 ? 0 : hour % 12;
+  if (period === "점심") return at(hour >= 10 && hour <= 12 ? hour : noonSide);
+  if (period && AM.has(period)) return at(morningSide);
+  if (period && PM.has(period)) return at(hour === 12 && (period === "저녁" || period === "밤") ? 0 : noonSide);
+  if (hour > 12 || hour === 0) return at(hour % 24);
+  // 12시: 낮 12시 / 밤 12시, 그 밖: 오전 / 오후
+  const [first, second] = hour === 12 ? [at(12), at(0)] : [at(hour % 12), at((hour % 12) + 12)];
+  if (previous === -Infinity) return hour >= 1 && hour <= 5 ? second : first;
+  const later = [first, second].filter((t) => timelineMinutes(t) >= previous).sort(compareTimelineTime);
+  return later[0] ?? second;
 }
 
 // ── 수면 ──
@@ -298,6 +313,22 @@ function readExercise(
 }
 
 // ── 식사 ──
+
+/** 시각(과 그 앞의 "점심", "저녁" 같은 말)이 둘 이상이면 두 번째부터 그 앞에서 자른다 */
+function splitAtTimes(clause: string): string[] {
+  const starts = findTimes(clause)
+    .map((t) => t.index)
+    .filter((i) => i > 0);
+  if (!starts.length) return [clause];
+  const parts: string[] = [];
+  let from = 0;
+  for (const start of starts) {
+    parts.push(clause.slice(from, start).trim());
+    from = start;
+  }
+  parts.push(clause.slice(from).trim());
+  return parts.filter(Boolean);
+}
 
 const SLOT_TIMES: Record<string, HHMM> = Object.fromEntries(MEAL_TIME_PRESETS.map((p) => [p.label, p.time]));
 const SLOT_WORD = /(아침|점심|간식|저녁|야식)\s*(?:은|는|에|엔|으로|으론|을|를)?/;

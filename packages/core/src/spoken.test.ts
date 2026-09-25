@@ -101,3 +101,28 @@ describe("말로 기록: 종이 기록지처럼 여러 줄 (이전 '한 번에 �
     expect(r.unparsed).toEqual(["오늘 기록"]);
   });
 });
+
+describe("말로 기록: 실제로 말한 문장", () => {
+  it("쉼표 없이 이어 말한 점심·저녁을 나누고, 12시는 낮 12시", () => {
+    const r = parseSpokenLog(
+      "아침 7시 반에 일어났고 저녁은 12시 반에 잤어\n\n점심 열두시 미트볼 저녁 7시 30분 단백질 파우더 40 그람 컵라면 팝콘 100 그람",
+    );
+    expect(r.morning).toEqual({ sleepStart: "00:30", sleepEnd: "07:30" });
+    expect(r.meals).toEqual([
+      { time: "12:00", description: "미트볼" },
+      { time: "19:30", description: "단백질 파우더 40g 컵라면 팝콘 100g" },
+    ]);
+    expect(r.unparsed).toEqual([]);
+  });
+
+  it("12시 읽기: 첫 식사는 낮, 저녁 뒤는 밤, 점심 11시는 오전", () => {
+    const times = (t: string) => parseSpokenLog(t).meals.map((m) => m.time);
+    expect(times("12시 김밥")).toEqual(["12:00"]);
+    expect(times("오후 12시 김밥")).toEqual(["12:00"]);
+    expect(times("7시 저녁밥, 12시 라면")).toEqual(["07:00", "12:00"]);
+    expect(times("19:00 저녁밥, 12시 라면")).toEqual(["19:00", "00:00"]);
+    expect(times("밤 12시 라면")).toEqual(["00:00"]);
+    expect(times("점심 11시 반 샐러드")).toEqual(["11:30"]);
+    expect(times("점심 1시 국수")).toEqual(["13:00"]);
+  });
+});
