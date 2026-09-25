@@ -31,6 +31,8 @@ export interface MealEditorProps {
   /** 오늘 이전 기록 (예시를 찾을 때) */
   pastLogs: DailyLog[];
   frequentFoods: string[];
+  /** 자주 먹는 음식 버튼에서 빼기 (기록은 그대로) */
+  onHideFood: (food: string) => void;
   recentMeals: Meal[];
   onSave: (meal: Meal) => void;
   onDelete?: () => void;
@@ -52,6 +54,7 @@ export function MealEditor({
   seed,
   pastLogs,
   frequentFoods,
+  onHideFood,
   recentMeals,
   onSave,
   onDelete,
@@ -312,9 +315,19 @@ export function MealEditor({
             {chips.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {chips.map((food) => (
-                  <Chip key={food} onClick={() => addFood(food)}>
-                    + {food}
-                  </Chip>
+                  <span key={food} className="flex items-center rounded-full border border-line bg-card text-xs">
+                    <button type="button" onClick={() => addFood(food)} className="py-1.5 pl-3 pr-1">
+                      + {food}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`${food} 버튼에서 빼기`}
+                      onClick={() => onHideFood(food)}
+                      className="px-2 py-1.5 text-ink-soft"
+                    >
+                      ✕
+                    </button>
+                  </span>
                 ))}
               </div>
             )}

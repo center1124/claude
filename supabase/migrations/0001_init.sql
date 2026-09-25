@@ -13,6 +13,8 @@ create table profiles (
   period_expected_date date,
   -- 내 운동 루틴: [{id, name, kind, method, amount}] (packages/core Exercise)
   routine jsonb not null default '[]',
+  -- 자주 먹는 음식 버튼에서 뺀 음식
+  hidden_foods text[] not null default '{}',
   -- 건강정보(민감정보) 수집 별도 동의 시각
   sensitive_data_consented_at timestamptz,
   created_at timestamptz not null default now()
@@ -78,7 +80,7 @@ create policy "본인 프로필 수정" on profiles
   for update using (id = auth.uid());
 -- 역할(role)과 담당 코치(coach_id)는 본인이 바꿀 수 없다 (코치가 관리자 화면에서 지정)
 revoke update on profiles from authenticated;
-grant update (name, period_tracking, period_expected_date, routine, sensitive_data_consented_at) on profiles to authenticated;
+grant update (name, period_tracking, period_expected_date, routine, hidden_foods, sensitive_data_consented_at) on profiles to authenticated;
 
 -- 가입하면 고객 프로필을 자동으로 만든다
 create function handle_new_user() returns trigger

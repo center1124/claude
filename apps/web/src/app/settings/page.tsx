@@ -1,6 +1,7 @@
 "use client";
 
 import { DeleteRecordsCard } from "@/components/DeleteRecordsCard";
+import { HiddenFoodsCard } from "@/components/HiddenFoodsCard";
 import { Logo } from "@/components/Logo";
 import { RoutineCard } from "@/components/RoutineCard";
 import { Card, inputClass, Loading } from "@/components/ui";
@@ -63,6 +64,11 @@ export default function SettingsPage() {
           </label>
         )}
       </Card>
+
+      <HiddenFoodsCard
+        foods={profile.hiddenFoods ?? []}
+        onChange={(hiddenFoods) => update({ ...profile, hiddenFoods })}
+      />
 
       <DeleteRecordsCard />
 

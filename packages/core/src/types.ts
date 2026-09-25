@@ -49,8 +49,10 @@ export interface ClientProfile {
   periodTracking?: boolean;
   /** 다음 생리 예정일 */
   periodExpectedDate?: ISODate;
-  /** 내 운동 루틴 (고객마다 다르게. 나중에 코치가 정해준다) */
+  /** 코치와 정한 운동 (고객마다 다르게. 나중에 코치가 정해준다) */
   routine?: Exercise[];
+  /** 자주 먹는 음식 버튼에서 뺀 음식 (기록은 그대로) */
+  hiddenFoods?: string[];
 }
 
 export function emptyLog(date: ISODate): DailyLog {

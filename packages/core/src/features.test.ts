@@ -111,6 +111,10 @@ describe("자주 먹는 음식", () => {
     expect(frequentFoods(logs).slice(0, 3)).toEqual(["과채스무디", "밥 추가", "돌솥비빔밥"]);
   });
 
+  it("숨긴 음식은 버튼에서 뺀다", () => {
+    expect(frequentFoods(logs, 8, ["과채스무디", "밥 추가"]).slice(0, 2)).toEqual(["돌솥비빔밥", "제육볶음 100g"]);
+  });
+
   it("최근 식사는 설명이 겹치지 않게 최근부터", () => {
     expect(recentMeals(logs).map((m) => m.description)).toEqual([
       "돌솥비빔밥\n+ 밥 추가",

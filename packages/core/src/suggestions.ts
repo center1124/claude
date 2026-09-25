@@ -5,12 +5,14 @@ import type { DailyLog, HHMM, Meal } from "./types";
  * 자주 먹는 음식 버튼. 식사 설명의 줄 단위("밥 200g", "쿠키 1개")로 세어
  * 많이 먹은 순, 같으면 최근 순으로 돌려준다. logs는 날짜순(오래된 → 최근)이라고 가정한다.
  */
-export function frequentFoods(logs: DailyLog[], limit = 8): string[] {
+export function frequentFoods(logs: DailyLog[], limit = 8, hidden: string[] = []): string[] {
+  const hiddenSet = new Set(hidden);
   const stats = new Map<string, { count: number; last: number }>();
   let order = 0;
   for (const log of logs) {
     for (const meal of log.meals) {
       for (const food of splitFoods(meal.description)) {
+        if (hiddenSet.has(food)) continue;
         const s = stats.get(food) ?? { count: 0, last: 0 };
         stats.set(food, { count: s.count + 1, last: ++order });
       }

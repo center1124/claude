@@ -303,7 +303,8 @@ export function DayView({ date }: { date: ISODate }) {
           meal={editing.meal}
           seed={editing.seed}
           pastLogs={pastLogs}
-          frequentFoods={frequentFoods(historyLogs)}
+          frequentFoods={frequentFoods(historyLogs, 8, profile.hiddenFoods)}
+          onHideFood={(food) => updateProfile({ ...profile, hiddenFoods: [...(profile.hiddenFoods ?? []), food] })}
           recentMeals={recentMeals(historyLogs)}
           onSave={saveMeal}
           onDelete={editing.meal ? () => deleteMeal(editing.meal!.id) : undefined}
