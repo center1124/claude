@@ -75,6 +75,8 @@ export function MealEditor({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
+  // 이미 적혀 있는 음식은 버튼에서 뺀다 (예시가 채워진 동안에는 예시를 지우고 넣으므로 모두 보여준다)
+  const chips = frequentFoods.filter((food) => exampleActive || !draft.description.includes(food));
   const canSave = draft.time && (draft.description.trim() || draft.photoIds.length > 0);
   const set = (patch: Partial<Meal>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -303,9 +305,9 @@ export function MealEditor({
               value={draft.description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            {frequentFoods.length > 0 && (
+            {chips.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {frequentFoods.map((food) => (
+                {chips.map((food) => (
                   <Chip key={food} onClick={() => addFood(food)}>
                     + {food}
                   </Chip>

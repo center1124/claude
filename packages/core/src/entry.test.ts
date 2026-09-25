@@ -4,6 +4,7 @@ import {
   groupPhotosIntoMeals,
   previousSleep,
   similarTimeMeal,
+  splitFoods,
   shiftTime,
   type DailyLog,
   type Meal,
@@ -59,5 +60,13 @@ describe("어제처럼 잤어요", () => {
   it("일주일 넘게 기록이 없으면 null", () => {
     const logs = [withSleep("2026-09-10", "00:30", "07:30"), ...Array.from({ length: 7 }, (_, i) => emptyLog(`2026-09-1${i + 1}`))];
     expect(previousSleep(logs)).toBeNull();
+  });
+});
+
+describe("자주 먹는 음식 버튼", () => {
+  it("쉼표·+·줄바꿈으로 나누고, 끼니 이름은 떼고, 긴 문장은 빼기", () => {
+    expect(splitFoods("점심 이마트 트레이더스 미트볼")).toEqual(["이마트 트레이더스 미트볼"]);
+    expect(splitFoods("밥 200g, 제육볶음\n+ 밥 추가")).toEqual(["밥 200g", "제육볶음", "밥 추가"]);
+    expect(splitFoods("컵라면 밥 콘 100g 단백질 파우더 40g")).toEqual([]);
   });
 });

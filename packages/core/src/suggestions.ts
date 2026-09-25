@@ -10,9 +10,7 @@ export function frequentFoods(logs: DailyLog[], limit = 8): string[] {
   let order = 0;
   for (const log of logs) {
     for (const meal of log.meals) {
-      for (const line of meal.description.split("\n")) {
-        const food = line.trim().replace(/^\+\s*/, "");
-        if (!food) continue;
+      for (const food of splitFoods(meal.description)) {
         const s = stats.get(food) ?? { count: 0, last: 0 };
         stats.set(food, { count: s.count + 1, last: ++order });
       }
@@ -22,6 +20,20 @@ export function frequentFoods(logs: DailyLog[], limit = 8): string[] {
     .sort(([, a], [, b]) => b.count - a.count || b.last - a.last)
     .slice(0, limit)
     .map(([food]) => food);
+}
+
+/** 버튼으로 만들기에 너무 긴 말 (말로 기록한 한 끼 전체 같은 것) */
+const MAX_FOOD_LENGTH = 14;
+
+/**
+ * 식사 설명을 음식 단위로: 줄바꿈·쉼표·"+"로 나누고, 앞의 끼니 이름("점심")은 뗀다.
+ * 너무 긴 말은 음식 하나로 보지 않는다.
+ */
+export function splitFoods(description: string): string[] {
+  return description
+    .split(/\n|,|·|\+/)
+    .map((f) => f.trim().replace(/^(아침|점심|저녁|간식|야식)\s*(?:은|는|에|으로)?\s+/, ""))
+    .filter((f) => f && f.length <= MAX_FOOD_LENGTH);
 }
 
 /** "최근 식사 그대로" 목록: 설명이 겹치지 않는 최근 식사들 (최근 → 오래된) */
