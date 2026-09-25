@@ -5,6 +5,8 @@ import {
   previousSleep,
   similarTimeMeal,
   splitFoods,
+  foodHistory,
+  matchFoods,
   foodsOf,
   joinFoods,
   shiftTime,
@@ -77,5 +79,26 @@ describe("자주 먹는 음식 버튼", () => {
     expect(foodsOf("밥 1공기 제육볶음 100g 김치")).toEqual(["밥 1공기", "제육볶음 100g", "김치"]);
     expect(foodsOf("샐러드 그리고 닭가슴살")).toEqual(["샐러드", "닭가슴살"]);
     expect(joinFoods([" 컵라면 ", "", "팝콘"])).toEqual("컵라면\n팝콘");
+  });
+});
+
+describe("한 번이라도 먹은 음식", () => {
+  const logs = [
+    { ...emptyLog("2025-10-01"), meals: [meal("12:00", "점심은 회사 앞 식당에서 먹은 돌솥비빔밥 정식")] },
+    log("2026-09-22", [meal("12:00", "김밥"), meal("19:00", "김치찌개\n밥 1공기")]),
+    log("2026-09-23", [meal("12:00", "김밥")]),
+  ];
+
+  it("긴 이름까지 모두, 많이 먹은 순", () => {
+    expect(foodHistory(logs)).toEqual(["김밥", "밥 1공기", "김치찌개", "회사 앞 식당에서 먹은 돌솥비빔밥 정식"]);
+    expect(foodHistory(logs, ["김밥"])).not.toContain("김밥");
+  });
+
+  it("추천어: 앞부분이 맞는 것 먼저, 띄어쓰기 무시", () => {
+    const foods = foodHistory(logs);
+    expect(matchFoods(foods, "김")).toEqual(["김밥", "김치찌개"]);
+    expect(matchFoods(foods, "밥1")).toEqual(["밥 1공기"]);
+    expect(matchFoods(foods, "비빔")).toEqual(["회사 앞 식당에서 먹은 돌솥비빔밥 정식"]);
+    expect(matchFoods(foods, "김밥")).toEqual([]); // 이미 다 쓴 말은 추천하지 않음
   });
 });

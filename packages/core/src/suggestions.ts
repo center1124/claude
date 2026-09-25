@@ -6,12 +6,22 @@ import type { DailyLog, HHMM, Meal } from "./types";
  * 많이 먹은 순, 같으면 최근 순으로 돌려준다. logs는 날짜순(오래된 → 최근)이라고 가정한다.
  */
 export function frequentFoods(logs: DailyLog[], limit = 8, hidden: string[] = []): string[] {
+  return foodHistory(logs, hidden)
+    .filter((f) => f.length <= MAX_FOOD_LENGTH)
+    .slice(0, limit);
+}
+
+/**
+ * 한 번이라도 먹은 음식 전체: 많이 먹은 순, 같으면 최근 순. 숨긴 음식은 뺀다.
+ * logs는 날짜순(오래된 → 최근)이라고 가정한다.
+ */
+export function foodHistory(logs: DailyLog[], hidden: string[] = []): string[] {
   const hiddenSet = new Set(hidden);
   const stats = new Map<string, { count: number; last: number }>();
   let order = 0;
   for (const log of logs) {
     for (const meal of log.meals) {
-      for (const food of splitFoods(meal.description)) {
+      for (const food of foodsOf(meal.description)) {
         if (hiddenSet.has(food)) continue;
         const s = stats.get(food) ?? { count: 0, last: 0 };
         stats.set(food, { count: s.count + 1, last: ++order });
@@ -20,8 +30,19 @@ export function frequentFoods(logs: DailyLog[], limit = 8, hidden: string[] = []
   }
   return [...stats.entries()]
     .sort(([, a], [, b]) => b.count - a.count || b.last - a.last)
-    .slice(0, limit)
     .map(([food]) => food);
+}
+
+/** 추천어: 쓰고 있는 말이 들어간 음식 (띄어쓰기 무시, 앞부분이 맞는 것 먼저) */
+export function matchFoods(foods: string[], query: string, limit = 6): string[] {
+  const q = query.replace(/\s/g, "");
+  if (!q) return [];
+  const squash = (f: string) => f.replace(/\s/g, "");
+  const hits = foods.filter((f) => squash(f).includes(q) && squash(f) !== q);
+  return [...hits.filter((f) => squash(f).startsWith(q)), ...hits.filter((f) => !squash(f).startsWith(q))].slice(
+    0,
+    limit,
+  );
 }
 
 /** 버튼으로 만들기에 너무 긴 말 (양 없이 이어 말한 한 끼 같은 것) */

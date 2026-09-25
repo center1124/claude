@@ -31,6 +31,8 @@ export interface MealEditorProps {
   /** 오늘 이전 기록 (예시를 찾을 때) */
   pastLogs: DailyLog[];
   frequentFoods: string[];
+  /** 한 번이라도 먹은 음식 전체 (추천어, 모두 보기) */
+  allFoods: string[];
   /** 자주 먹는 음식 버튼에서 빼기 (기록은 그대로) */
   onHideFood: (food: string) => void;
   recentMeals: Meal[];
@@ -54,6 +56,7 @@ export function MealEditor({
   seed,
   pastLogs,
   frequentFoods,
+  allFoods,
   onHideFood,
   recentMeals,
   onSave,
@@ -83,7 +86,10 @@ export function MealEditor({
   const fileInput = useRef<HTMLInputElement>(null);
 
   // 이미 적혀 있는 음식은 버튼에서 뺀다 (예시가 채워진 동안에는 예시를 지우고 넣으므로 모두 보여준다)
-  const chips = frequentFoods.filter((food) => exampleActive || !foodsOf(draft.description).includes(food));
+  const [showAllFoods, setShowAllFoods] = useState(false);
+  const written = exampleActive ? [] : foodsOf(draft.description);
+  const moreFoods = allFoods.filter((food) => !written.includes(food));
+  const chips = showAllFoods ? moreFoods : frequentFoods.filter((food) => !written.includes(food));
   const canSave = draft.time && (draft.description.trim() || adding.trim() || draft.photoIds.length > 0);
   const set = (patch: Partial<Meal>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -310,6 +316,7 @@ export function MealEditor({
               dimmed={exampleActive}
               adding={adding}
               onAddingChange={setAdding}
+              history={allFoods}
               onChange={(foods) => setDescription(joinFoods(foods))}
             />
             {chips.length > 0 && (
@@ -329,6 +336,15 @@ export function MealEditor({
                     </button>
                   </span>
                 ))}
+                {moreFoods.length > chips.length || showAllFoods ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllFoods(!showAllFoods)}
+                    className="rounded-full px-3 py-1.5 text-xs font-bold text-ink-soft underline"
+                  >
+                    {showAllFoods ? "접기" : `모두 보기 (${moreFoods.length})`}
+                  </button>
+                ) : null}
               </div>
             )}
           </div>

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   addDays,
   compareTimelineTime,
   foodsOf,
   formatDateKo,
+  foodHistory,
   frequentFoods,
   groupPhotosIntoMeals,
   hasContent,
@@ -38,12 +40,16 @@ type Editing = { meal?: Meal; seed?: MealSeed } | null;
 
 export function DayView({ date }: { date: ISODate }) {
   const repo = useRepository();
+  const router = useRouter();
   const today = useToday();
   const isToday = date === today;
   const { log, update } = useDailyLog(date);
   const { log: nextLog } = useDailyLog(addDays(date, 1));
   const { log: prevLog } = useDailyLog(addDays(date, -1));
   const pastLogs = useLogs(addDays(date, -30), addDays(date, -1));
+  // 한 번이라도 먹은 음식 추천은 보고 있는 날과 상관없이 오늘까지 최근 1년 기록에서 (지난 날을 나중에 적을 때도)
+  const foodEnd = today && today > date ? today : date;
+  const foodLogs = useLogs(addDays(foodEnd, -365), foodEnd);
   const { profile, update: updateProfile } = useProfile();
   const [editing, setEditing] = useState<Editing>(null);
   const [importing, setImporting] = useState(false);
@@ -51,7 +57,7 @@ export function DayView({ date }: { date: ISODate }) {
   const [notice, setNotice] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
 
-  if (!log || !nextLog || !profile || !pastLogs) return <Loading />;
+  if (!log || !nextLog || !profile || !pastLogs || !foodLogs) return <Loading />;
 
   const meals = [...log.meals].sort((a, b) => compareTimelineTime(a.time, b.time));
   const historyLogs = [...pastLogs, log];
@@ -148,10 +154,23 @@ export function DayView({ date }: { date: ISODate }) {
         <DateNavLink date={addDays(date, -1)} label="이전 날" icon="‹" />
         <div className="text-center">
           <Logo className="block text-2xl" />
-          <h1 className="font-bold">
-            {formatDateKo(date)}
-            {isToday && <span className="ml-1.5 text-sm font-normal text-pen">오늘</span>}
-          </h1>
+          {/* 날짜를 누르면 달력이 떠서 원하는 날로 바로 간다 (지난 기록을 나중에 적을 때) */}
+          <div className="relative">
+            <h1 className="font-bold">
+              {formatDateKo(date)}
+              {isToday && <span className="ml-1.5 text-sm font-normal text-pen">오늘</span>}
+              <span className="ml-1 text-xs text-ink-soft" aria-hidden>
+                ▾
+              </span>
+            </h1>
+            <input
+              type="date"
+              aria-label="날짜 골라서 이동"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              value={date}
+              onChange={(e) => e.target.value && router.push(`/day/${e.target.value}`)}
+            />
+          </div>
         </div>
         <DateNavLink date={addDays(date, 1)} label="다음 날" icon="›" />
       </header>
@@ -303,7 +322,8 @@ export function DayView({ date }: { date: ISODate }) {
           meal={editing.meal}
           seed={editing.seed}
           pastLogs={pastLogs}
-          frequentFoods={frequentFoods(historyLogs, 8, profile.hiddenFoods)}
+          frequentFoods={frequentFoods(foodLogs, 8, profile.hiddenFoods)}
+          allFoods={foodHistory(foodLogs, profile.hiddenFoods)}
           onHideFood={(food) => updateProfile({ ...profile, hiddenFoods: [...(profile.hiddenFoods ?? []), food] })}
           recentMeals={recentMeals(historyLogs)}
           onSave={saveMeal}

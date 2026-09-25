@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { foodsOf } from "@diet/core";
+import { foodsOf, matchFoods } from "@diet/core";
 import { inputClass } from "./ui";
 
 /**
@@ -13,6 +13,7 @@ export function FoodList({
   dimmed,
   adding,
   onAddingChange,
+  history,
   onChange,
 }: {
   foods: string[];
@@ -21,6 +22,8 @@ export function FoodList({
   /** 추가 칸에 쓰고 있는 말 (저장을 바로 눌러도 빠지지 않도록 바깥에서 들고 있는다) */
   adding: string;
   onAddingChange: (text: string) => void;
+  /** 한 번이라도 먹은 음식 (쓰는 동안 추천어로 보여준다) */
+  history: string[];
   onChange: (foods: string[]) => void;
 }) {
   const [editing, setEditing] = useState<number | null>(null);
@@ -32,6 +35,11 @@ export function FoodList({
     onChange([...foods.slice(0, index), ...replaced, ...foods.slice(index + 1)]);
     setEditing(null);
   }
+
+  const suggestions = matchFoods(
+    history.filter((f) => !foods.includes(f)),
+    adding,
+  );
 
   function add() {
     const added = foodsOf(adding);
@@ -112,6 +120,23 @@ export function FoodList({
           추가
         </button>
       </div>
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" aria-label="추천 음식">
+          {suggestions.map((food) => (
+            <button
+              key={food}
+              type="button"
+              onClick={() => {
+                onChange([...foods, food]);
+                setAdding("");
+              }}
+              className="rounded-full border border-pen/40 bg-card px-3 py-1.5 text-sm text-pen"
+            >
+              {food}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
