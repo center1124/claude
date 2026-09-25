@@ -5,6 +5,8 @@ import {
   previousSleep,
   similarTimeMeal,
   splitFoods,
+  foodsOf,
+  joinFoods,
   shiftTime,
   type DailyLog,
   type Meal,
@@ -67,6 +69,13 @@ describe("자주 먹는 음식 버튼", () => {
   it("쉼표·+·줄바꿈으로 나누고, 끼니 이름은 떼고, 긴 문장은 빼기", () => {
     expect(splitFoods("점심 이마트 트레이더스 미트볼")).toEqual(["이마트 트레이더스 미트볼"]);
     expect(splitFoods("밥 200g, 제육볶음\n+ 밥 추가")).toEqual(["밥 200g", "제육볶음", "밥 추가"]);
-    expect(splitFoods("컵라면 밥 콘 100g 단백질 파우더 40g")).toEqual([]);
+    expect(splitFoods("컵라면 밥 콘 100g 단백질 파우더 40g")).toEqual(["컵라면 밥 콘 100g", "단백질 파우더 40g"]);
+    expect(splitFoods("점심은 회사 앞 식당에서 먹은 돌솥비빔밥 정식")).toEqual([]);
+  });
+
+  it("음식 하나하나로: 양 뒤에서도 나눈다", () => {
+    expect(foodsOf("밥 1공기 제육볶음 100g 김치")).toEqual(["밥 1공기", "제육볶음 100g", "김치"]);
+    expect(foodsOf("샐러드 그리고 닭가슴살")).toEqual(["샐러드", "닭가슴살"]);
+    expect(joinFoods([" 컵라면 ", "", "팝콘"])).toEqual("컵라면\n팝콘");
   });
 });

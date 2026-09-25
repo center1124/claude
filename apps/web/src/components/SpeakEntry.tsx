@@ -76,7 +76,7 @@ export function SpeakEntry({
                   {parsed.meals.map((m, i) => (
                     <li key={i} className="flex gap-3">
                       <span className="w-12 shrink-0 font-bold">{m.time}</span>
-                      <span className="flex-1 whitespace-pre-line text-pen">{m.description || "–"}</span>
+                      <span className="flex-1 text-pen">{m.description ? m.description.split("\n").join(" · ") : "–"}</span>
                       {m.fullness && <span className="shrink-0 font-bold text-pen-blue">포만 {m.fullness}</span>}
                     </li>
                   ))}

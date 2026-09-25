@@ -7,6 +7,7 @@ import {
   type ExerciseSlot,
 } from "./exercise";
 import { compareTimelineTime, MEAL_TIME_PRESETS, timelineMinutes, toHHMM } from "./time";
+import { foodsOf, joinFoods } from "./suggestions";
 import type { HHMM, MorningCheck } from "./types";
 
 /**
@@ -79,6 +80,8 @@ export function parseSpokenLog(text: string, knownExercises: Pick<Exercise, "nam
     }
     result.unparsed.push(clause);
   }
+  // 식사는 음식 하나하나로 나눠 줄바꿈으로 잇는다 (식사 입력 창에서 음식마다 누를 수 있게)
+  for (const meal of result.meals) meal.description = joinFoods(foodsOf(meal.description));
   return result;
 }
 

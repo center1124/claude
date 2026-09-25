@@ -7,6 +7,8 @@ import {
   nowHHMM,
   shiftTime,
   similarTimeMeal,
+  foodsOf,
+  joinFoods,
   type DailyLog,
   toHHMM,
   type HHMM,
@@ -15,6 +17,7 @@ import {
 } from "@diet/core";
 import { importPhoto, photoErrorMessage } from "@/lib/image";
 import { useRepository } from "@/lib/repository";
+import { FoodList } from "./FoodList";
 import { Photo } from "./Photo";
 import { inputClass } from "./ui";
 
@@ -72,12 +75,13 @@ export function MealEditor({
   const [addedPhotos, setAddedPhotos] = useState<string[]>(seed?.photoIds ?? []);
   const [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [adding, setAdding] = useState("");
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // 이미 적혀 있는 음식은 버튼에서 뺀다 (예시가 채워진 동안에는 예시를 지우고 넣으므로 모두 보여준다)
-  const chips = frequentFoods.filter((food) => exampleActive || !draft.description.includes(food));
-  const canSave = draft.time && (draft.description.trim() || draft.photoIds.length > 0);
+  const chips = frequentFoods.filter((food) => exampleActive || !foodsOf(draft.description).includes(food));
+  const canSave = draft.time && (draft.description.trim() || adding.trim() || draft.photoIds.length > 0);
   const set = (patch: Partial<Meal>) => setDraft((d) => ({ ...d, ...patch }));
 
   function setTime(time: HHMM, source?: MealSeed["timeSource"]) {
@@ -130,8 +134,8 @@ export function MealEditor({
   }
 
   function addFood(food: string) {
-    const current = exampleActive ? "" : draft.description.trimEnd();
-    setDescription(current ? `${current}\n${food}` : food);
+    const current = exampleActive ? [] : foodsOf(draft.description);
+    setDescription(joinFoods([...current, food]));
   }
 
   function cancel() {
@@ -141,7 +145,8 @@ export function MealEditor({
 
   function save() {
     removedPhotos.forEach((id) => void repo.deletePhoto(id));
-    onSave({ ...draft, description: draft.description.trim() });
+    // 추가 칸에 써 두고 [추가]를 누르지 않은 음식도 함께 저장한다
+    onSave({ ...draft, description: joinFoods([...foodsOf(draft.description), ...foodsOf(adding)]) });
     onClose();
   }
 
@@ -266,7 +271,7 @@ export function MealEditor({
 
           <div className="grid grid-cols-1 gap-1.5">
             <label htmlFor="meal-description" className="text-sm font-medium">
-              먹은 것
+              먹은 것 <span className="text-xs font-normal text-ink-soft">(음식을 누르면 고치고 ✕로 지워요)</span>
             </label>
             {recentMeals.length > 0 && !meal && !draft.description && (
               <div className="grid gap-1">
@@ -297,13 +302,12 @@ export function MealEditor({
                 </button>
               </div>
             )}
-            <textarea
-              id="meal-description"
-              rows={3}
-              className={`${inputClass} ${exampleActive ? "text-pen/70" : ""}`}
-              placeholder="예) 돌솥비빔밥, 과채스무디"
-              value={draft.description}
-              onChange={(e) => setDescription(e.target.value)}
+            <FoodList
+              foods={foodsOf(draft.description)}
+              dimmed={exampleActive}
+              adding={adding}
+              onAddingChange={setAdding}
+              onChange={(foods) => setDescription(joinFoods(foods))}
             />
             {chips.length > 0 && (
               <div className="flex flex-wrap gap-1.5">

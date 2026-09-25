@@ -22,18 +22,32 @@ export function frequentFoods(logs: DailyLog[], limit = 8): string[] {
     .map(([food]) => food);
 }
 
-/** 버튼으로 만들기에 너무 긴 말 (말로 기록한 한 끼 전체 같은 것) */
+/** 버튼으로 만들기에 너무 긴 말 (양 없이 이어 말한 한 끼 같은 것) */
 const MAX_FOOD_LENGTH = 14;
 
-/**
- * 식사 설명을 음식 단위로: 줄바꿈·쉼표·"+"로 나누고, 앞의 끼니 이름("점심")은 뗀다.
- * 너무 긴 말은 음식 하나로 보지 않는다.
- */
+/** 자주 먹는 음식 버튼: 음식 단위로 나눈 것 중 버튼으로 쓸 만한 길이만 */
 export function splitFoods(description: string): string[] {
+  return foodsOf(description).filter((f) => f.length <= MAX_FOOD_LENGTH);
+}
+
+/** 음식 뒤에 붙는 양: "40g", "2개", "1공기" — 여기서 다음 음식이 시작된다 */
+const AMOUNT_THEN_NEXT =
+  /(\d+(?:\.\d+)?\s*(?:g|kg|ml|l|개|잔|공기|그릇|조각|알|스푼|큰술|숟가락|컵|봉지|팩|캔|장|줄|쪽|인분))\s+(?=\S)/gi;
+
+/**
+ * 한 끼의 설명을 음식 하나하나로 나눈다: 줄바꿈·쉼표·"+"·"그리고", 그리고 양 뒤에서.
+ * 앞의 끼니 이름("점심")은 뗀다. 식사 설명은 음식을 줄바꿈으로 이어 저장한다 (joinFoods).
+ */
+export function foodsOf(description: string): string[] {
   return description
-    .split(/\n|,|·|\+/)
+    .replace(AMOUNT_THEN_NEXT, "$1\n")
+    .split(/\n|,|·|\+|\s그리고\s/)
     .map((f) => f.trim().replace(/^(아침|점심|저녁|간식|야식)\s*(?:은|는|에|으로)?\s+/, ""))
-    .filter((f) => f && f.length <= MAX_FOOD_LENGTH);
+    .filter(Boolean);
+}
+
+export function joinFoods(foods: string[]): string {
+  return foods.map((f) => f.trim()).filter(Boolean).join("\n");
 }
 
 /** "최근 식사 그대로" 목록: 설명이 겹치지 않는 최근 식사들 (최근 → 오래된) */

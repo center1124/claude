@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import {
   addDays,
   compareTimelineTime,
+  foodsOf,
   formatDateKo,
   frequentFoods,
   groupPhotosIntoMeals,
@@ -242,7 +243,13 @@ export function DayView({ date }: { date: ISODate }) {
                   <span className="w-12 shrink-0 pt-0.5 text-sm font-bold">{meal.time}</span>
                   <span className="grid flex-1 gap-2">
                     {meal.description ? (
-                      <span className="whitespace-pre-line text-pen">{meal.description}</span>
+                      <span className="flex flex-wrap gap-1">
+                        {foodsOf(meal.description).map((food, i) => (
+                          <span key={i} className="rounded-full bg-paper px-2.5 py-0.5 text-pen">
+                            {food}
+                          </span>
+                        ))}
+                      </span>
                     ) : (
                       <span className="text-sm text-ink-soft underline">눌러서 먹은 것 적기</span>
                     )}

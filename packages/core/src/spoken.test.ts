@@ -75,10 +75,10 @@ describe("말로 기록: 종이 기록지처럼 여러 줄 (이전 '한 번에 �
 12:30 야식 라면`;
     expect(meals(text)).toEqual([
       { time: "09:00", description: "과채스무디" },
-      { time: "12:30", description: "돌솥비빔밥\n+ 밥 추가", fullness: 8 },
+      { time: "12:30", description: "돌솥비빔밥\n밥 추가", fullness: 8 },
       { time: "15:00", description: "쿠키 1개" },
       { time: "18:40", description: "밥 200g\n제육볶음 100g", fullness: 9 },
-      { time: "00:30", description: "야식 라면" },
+      { time: "00:30", description: "라면" },
     ]);
   });
 
@@ -110,7 +110,7 @@ describe("말로 기록: 실제로 말한 문장", () => {
     expect(r.morning).toEqual({ sleepStart: "00:30", sleepEnd: "07:30" });
     expect(r.meals).toEqual([
       { time: "12:00", description: "미트볼" },
-      { time: "19:30", description: "단백질 파우더 40g 컵라면 팝콘 100g" },
+      { time: "19:30", description: "단백질 파우더 40g\n컵라면 팝콘 100g" },
     ]);
     expect(r.unparsed).toEqual([]);
   });
