@@ -38,6 +38,13 @@ export class LocalDiaryRepository implements DiaryRepository {
     return dates.map((date, i) => logs[i] ?? emptyLog(date));
   }
 
+  /** 이 기기에 있는 모든 하루 기록 (서버로 올릴 때) */
+  async allLogs(): Promise<DailyLog[]> {
+    const all = (await keys<string>(this.store)).filter((k) => k.startsWith("log:"));
+    const logs = await getMany<DailyLog | undefined>(all, this.store);
+    return logs.filter((l): l is DailyLog => !!l).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   async saveLog(log: DailyLog): Promise<void> {
     await set(logKey(log.date), log, this.store);
   }

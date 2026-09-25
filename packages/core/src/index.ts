@@ -9,3 +9,4 @@ export * from "./repository";
 export * from "./summary";
 export * from "./exercise";
 export * from "./spoken";
+export * from "./db";

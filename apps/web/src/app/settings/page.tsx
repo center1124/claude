@@ -1,5 +1,6 @@
 "use client";
 
+import { AccountCard } from "@/components/AccountCard";
 import { DeleteRecordsCard } from "@/components/DeleteRecordsCard";
 import { HiddenFoodsCard } from "@/components/HiddenFoodsCard";
 import { Logo } from "@/components/Logo";
@@ -17,6 +18,8 @@ export default function SettingsPage() {
         <Logo className="block text-2xl" />
         <h1 className="font-bold">설정</h1>
       </header>
+
+      <AccountCard />
 
       <Card title="내 정보">
         <label className="grid gap-1 text-sm font-medium">
@@ -71,11 +74,6 @@ export default function SettingsPage() {
       />
 
       <DeleteRecordsCard />
-
-      <p className="rounded-2xl bg-card p-4 text-xs leading-relaxed text-ink-soft">
-        지금은 체험판이라 기록이 이 기기의 브라우저에만 저장돼요. 로그인과 서버 저장이 연결되면 코치와 기록이
-        공유됩니다.
-      </p>
     </div>
   );
 }

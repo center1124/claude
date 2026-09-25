@@ -10,11 +10,12 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@diet/core": "workspace:*",
+    "@supabase/supabase-js": "^2.117.1",
+    "idb-keyval": "^6.2.2",
     "next": "16.3.6",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "@diet/core": "workspace:*",
-    "idb-keyval": "^6.2.2"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
